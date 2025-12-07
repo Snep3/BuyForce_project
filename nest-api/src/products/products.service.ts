@@ -24,6 +24,31 @@ export class ProductsService {
       .exec();
   }
 
+  // UPDATE PRODUCT
+async updateProduct(id: string, updateData: any) {
+  try {
+    const updated = await this.productModel
+      .findByIdAndUpdate(id, updateData, { new: true })
+      .populate('comments.userId', 'username')
+      .exec();
+
+    return updated; // returns null if not found
+  } catch (err) {
+    throw new Error('Failed to update product: ' + err.message);
+  }
+}
+
+// DELETE PRODUCT
+async deleteProduct(id: string) {
+  try {
+    const deleted = await this.productModel.findByIdAndDelete(id).exec();
+    return deleted; // returns null if not found
+  } catch (err) {
+    throw new Error('Failed to delete product: ' + err.message);
+  }
+}
+
+
   async createProduct(data: {
     name: string;
     price: number;

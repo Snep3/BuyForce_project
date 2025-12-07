@@ -39,6 +39,42 @@ export class UsersService {
     };
   }
 
+  // >>>added - update user
+async updateUser(userId: string, data: Partial<User>) {
+  const allowed = ['username', 'email', 'password'];
+  const updateData: any = {};
+
+  for (const key of allowed) {
+    if (data[key] !== undefined) updateData[key] = data[key];
+  }
+
+  const updated = await this.userModel
+    .findByIdAndUpdate(userId, updateData, { new: true })
+    .select('-password');
+
+  return updated;
+}
+
+// >>>added - delete user
+async deleteUser(userId: string) {
+  const deleted = await this.userModel.findByIdAndDelete(userId);
+  return deleted;
+}
+
+// >>>added - remove favorite
+async removeFavorite(userId: string, productId: string) {
+  const updated = await this.userModel
+    .findByIdAndUpdate(
+      userId,
+      { $pull: { favorites: productId } },
+      { new: true },
+    )
+    .select('-password');
+
+  return updated;
+}
+
+
   async login(email: string, password: string) {
     if (!email || !password) {
       throw new Error('Email and password required');
