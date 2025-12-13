@@ -1,6 +1,6 @@
 // src/entities/group-membership.entity.ts
 
-import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 import { Group } from './groups.entity';
 import { User } from './users.entity';
 import { Transaction } from './transactions.entity';
@@ -10,9 +10,9 @@ export class GroupMembership {
 
   // --- עמודות רגילות ---
 
-  // 2. id (PRIMARY KEY, uuid, not null)
-  @PrimaryColumn({ type: 'uuid' }) 
-  id: string; //
+// 2. id (PRIMARY KEY, uuid, not null)
+  @PrimaryGeneratedColumn('uuid') // ✅ TypeORM / DB ייצור את ה-UUID אוטומטית
+  id: string; //
 
   // 3. group_id (FOREIGN KEY, uuid, not null)
   @Column({ type: 'uuid', name: 'group_id', nullable: false })
@@ -57,4 +57,5 @@ export class GroupMembership {
   @ManyToOne(() => Transaction, (transaction) => transaction.groupMemberships)
   @JoinColumn({ name: 'transaction_id' })
   transaction: Transaction; // אובייקט ה-Transaction המקושר
+  
 }

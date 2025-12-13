@@ -34,6 +34,15 @@ export class UsersController {
     return UserResponseDto.fromEntity(user);
   }
 
+  @Get()
+  @ApiOperation({ summary: 'שליפת כל המשתמשים הפעילים' })
+  @ApiResponse({ status: 200, type: [UserResponseDto] }) // שינוי ל-Type Array
+  async findAll(): Promise<UserResponseDto[]> {
+    const users = await this.usersService.findAllActive(); // ⬅️ יש להוסיף את הפונקציה הזו ל-Service!
+    // map the array of entities to array of DTOs
+    return users.map(user => UserResponseDto.fromEntity(user));
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'מחיקת משתמש (מחיקה רכה - Soft Delete)' })

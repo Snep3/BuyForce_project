@@ -65,11 +65,11 @@ export class Group {
 
   // --- קישורי One-to-Many (Referenced by) ---
   
-  // 10. קישור לטבלת group_memberships (group_memberships_group_id_fkey)
-  @OneToMany(() => GroupMembership, (membership) => membership.group)
-  memberships: GroupMembership[]; // מערך חברי הקבוצה
-  
-  // 11. קישור לטבלת transactions (transactions_group_id_fkey)
-  @OneToMany(() => Transaction, (transaction) => transaction.group)
-  transactions: Transaction[]; // מערך העסקאות הקשורות לקבוצה
+  // // 10. קישור לטבלת group_memberships (group_memberships_group_id_fkey)
+  @OneToMany(() => GroupMembership, (membership) => membership.group)
+  memberships: GroupMembership[]; // ✅ שונה ל-`memberships` במקום `groupMemberships`
+  
+  // 11. קישור לטבלת transactions (transactions_group_id_fkey)
+  @OneToMany(() => Transaction, (transaction) => transaction.group)
+  transactions: Transaction[];  
 }

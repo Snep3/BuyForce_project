@@ -1,7 +1,7 @@
+// src/sql-api-connection/user_settings/dto/update-user-setting.dto.ts
+
 import { PartialType } from '@nestjs/swagger';
 import { CreateUserSettingDto } from './create-user-setting.dto';
 
-export class UpdateUserSettingDto extends PartialType(CreateUserSettingDto) {
-    // מוודאים ש-userId לא יעבור בעדכון (נשלח ב-URL)
-    userId: undefined; 
-}
+// 🛑 הפתרון אם userId כבר לא קיים ב-CreateUserSettingDto
+export class UpdateUserSettingDto extends PartialType(CreateUserSettingDto) {}

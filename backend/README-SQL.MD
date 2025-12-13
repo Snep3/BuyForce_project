@@ -79,3 +79,14 @@ psql -U <your user name> -d buyforce_local -f buyforce_schema.sql
 נשתמש במנגנון ה-API של הפרויקט.
 
 API (Node.js): הקוד בתיקיית ה-backend שלך (למשל, בקובץ index.js) מכיל את נקודות הקצה (Endpoints) שאתם בונים. כל נקודת קצה (כמו POST /api/products) אחראית לבצע פעולה ב-PostgreSQL.
+
+על מנת לראות את הנתונים שמצטרפים לטבלאות אפשר לבקש בקשת get בpostman
+למשל לטבלת קטגוריות http://localhost:3000/sql-api-connection/categories
+
+ישנה אופציה נוספת לראות את הטבלאות המעודכנות בvisual studio code terminal שם  אחרי שנתחבר לבסיס המידע במקרה שלנו זה buyforce אז נרשום select*from chartName
+את chartName נשנה לשם הטבלה
+SELECT * FROM products;  
+זה הצורה של המבנה כולל הנקודה פסיק אחרת זה לא יעבוד
+
+נתקין npm install class-transformer
+npm install class-validator # (כנראה כבר מותקן)

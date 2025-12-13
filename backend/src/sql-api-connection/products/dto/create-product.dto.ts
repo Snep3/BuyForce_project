@@ -51,4 +51,12 @@ export class CreateProductDto {
   @IsOptional()
   @IsNumber()
   maxMembers?: number;
+    @IsOptional()
+  @IsString()
+  currency?: string;  // ⬅️ תוסיף
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean; // ⬅️ תוסיף
+
 }

@@ -1,5 +1,5 @@
 import { 
-  Entity, PrimaryColumn, Column, ManyToOne, JoinColumn, CreateDateColumn 
+  Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn 
 } from 'typeorm';
 import { User } from './users.entity'; // נדרש לקישור
 
@@ -9,7 +9,7 @@ export class SearchHistory {
   // --- עמודות רגילות ---
 
   // 2. id (PRIMARY KEY, uuid, not null)
-  @PrimaryColumn({ type: 'uuid' }) 
+  @PrimaryGeneratedColumn( 'uuid' ) 
   id: string; 
 
   // 3. user_id (FOREIGN KEY, uuid, not null)

@@ -1,12 +1,19 @@
 // src/admins/dto/create-admin.dto.ts
 
+import { IsUUID, IsString, IsNotEmpty } from 'class-validator';
+// ⚠️ הייבוא של Type נמחק 
+
 export class CreateAdminDto {
-  // נדרש כיוון שמוגדר כ-@PrimaryColumn מסוג UUID ואינו נוצר אוטומטית.
-  readonly id: string; 
-  
-  // המפתח הזר לטבלת users
-  readonly userId: string; 
-  
-  // תפקיד המנהל (לדוגמה: 'super_admin', 'ops', 'support')
-  readonly role: string; 
+  
+  // המפתח הזר לטבלת users
+  @IsNotEmpty() 
+  @IsUUID()
+  // ⚠️ הוסר: @Type(() => String) 
+  readonly userId: string; 
+  
+  // תפקיד המנהל 
+  @IsNotEmpty() 
+  @IsString()
+  // ⚠️ הוסר: @Type(() => String) 
+  readonly role: string; 
 }

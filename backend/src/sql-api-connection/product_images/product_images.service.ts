@@ -1,70 +1,78 @@
+// src/product_images/product_images.service.ts
+
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DeepPartial } from 'typeorm'; // ייבוא DeepPartial נדרש לתיקון שגיאת create
+import { Repository } from 'typeorm'; 
+import { ProductImage } from '../entities/product_images.entity'; 
 import { CreateProductImageDto } from './dto/create-product-image.dto'; 
-import { UpdateProductImageDto } from './dto/update-product-image.dto'; 
-import { ProductImage } from '../../sql-api-connection/entities/product_images.entity'; 
+import { UpdateProductImageDto } from './dto/update-product-image.dto';
+
+// נניח שייבאת את ה-Service של המוצרים אם אתה רוצה לוודא קיום מוצר
+// import { ProductsService } from '../products/products.service'; 
 
 @Injectable()
 export class ProductImagesService {
+  // 1. הזרקת ה-Repository של TypeORM
   constructor(
     @InjectRepository(ProductImage)
-    private productImagesRepository: Repository<ProductImage>,
+    private readonly productImageRepository: Repository<ProductImage>,
+    // private readonly productsService: ProductsService, // אם נדרשת ולידציה של product_id
   ) {}
 
-  // 1. CREATE: יצירת תמונה חדשה (תיקון שגיאות TS2769 ו-TS2740)
+  // 1. יצירת תמונה חדשה (POST /product-images)
   async create(createProductImageDto: CreateProductImageDto): Promise<ProductImage> {
+    // התיקון הקודם כבר שם: שימוש ב-createProductImageDto.productId (ב-camelCase)
+    // אופציונלי: ולידציה ש-product_id קיים
+    // await this.productsService.findOne(createProductImageDto.productId); 
     
-    // **התיקון המוחלט לשגיאת הטיפוסים:**
-    // 1. שימוש ב-Spread Operator ({...}) כדי להבטיח אובייקט נתונים פשוט (POJO).
-    // 2. הקלדה מחדש כפויה (Type Assertion) ל-DeepPartial<ProductImage>
-    //    כדי לעקוף את הקונפליקט בטיפוסים של TypeORM.
-    const newImage = this.productImagesRepository.create(
-        { ...createProductImageDto } as DeepPartial<ProductImage>
-    ); 
+    // יצירת אובייקט Entity חדש מה-DTO.
+    const newImage = this.productImageRepository.create(createProductImageDto);
     
-    // 3. הוספת await ל-save() פותרת את שגיאת ה-return הנגררת (Promise)
-    return await this.productImagesRepository.save(newImage); 
+    // שמירה במסד הנתונים והחזרת הרשומה השמורה
+    return this.productImageRepository.save(newImage);
   }
 
-  // 2. READ ALL (שליפת כל התמונות של מוצר ספציפי)
+  // 2. שליפת כל התמונות של מוצר מסוים (GET /product-images/product/:productId)
   async findAllByProductId(productId: string): Promise<ProductImage[]> {
-    // הוספת await כדי לפתור שגיאות טיפוסים (Promise<ProductImage[]>)
-    return await this.productImagesRepository.find({ 
-      where: { productId: productId }, // ודא ש-productId הוא שם המאפיין הנכון ב-Entity
-      order: { sortOrder: 'ASC' } 
+    return this.productImageRepository.find({
+      // ⬅️ נשאר: שימוש במאפיין ה-Entity: productId
+      where: { productId: productId }, 
+      // ⬅️ נשאר: שימוש במאפייני ה-Entity: sortOrder, createdAt
+      order: { sortOrder: 'ASC', createdAt: 'ASC' }, 
     });
   }
-
-  // 3. READ ONE: שליפת תמונה לפי ID
-  async findOne(id: number): Promise<ProductImage> {
-    const image = await this.productImagesRepository.findOne({ 
-      where: { id }
-    });
+  
+  // 3. מציאת תמונה ספציפית לפי ID (פונקציה פנימית לשימוש העדכון והמחיקה)
+  async findOneOrFail(id: number): Promise<ProductImage> {
+    // שימוש ב-where: { id } תקין.
+    const image = await this.productImageRepository.findOne({ where: { id } }); 
     
     if (!image) {
-        throw new NotFoundException(`Product Image with ID ${id} not found`);
+      // זריקת שגיאה אם התמונה לא נמצאה
+      throw new NotFoundException(`Product image with ID ${id} not found.`);
     }
     return image;
   }
 
-  // 4. UPDATE: עדכון תמונה קיימת
+  // 4. עדכון תמונה קיימת (PUT /product-images/:id)
   async update(id: number, updateProductImageDto: UpdateProductImageDto): Promise<ProductImage> {
-    const image = await this.findOne(id);
-    
-    // שימוש ב-merge כדי לעדכן רק את השדות שהועברו ב-DTO
-    const updatedImage = this.productImagesRepository.merge(image, updateProductImageDto);
-    
-    // שמירה עם await
-    return await this.productImagesRepository.save(updatedImage);
+    const existingImage = await this.findOneOrFail(id); // מוודא קיום תמונה
+
+    // מיזוג הנתונים המעודכנים לתוך האובייקט הקיים
+    const updatedImage = this.productImageRepository.merge(existingImage, updateProductImageDto);
+
+    // שמירה במסד הנתונים
+    return this.productImageRepository.save(updatedImage);
   }
 
-  // 5. DELETE: מחיקת תמונה
+  // 5. מחיקת תמונה (DELETE /product-images/:id)
   async remove(id: number): Promise<void> {
-    const result = await this.productImagesRepository.delete(id);
+    const result = await this.productImageRepository.delete(id);
     
     if (result.affected === 0) {
-        throw new NotFoundException(`Product Image with ID ${id} not found`);
+      // אם לא נמחקה אף רשומה (כלומר, ה-ID לא נמצא)
+      throw new NotFoundException(`Product image with ID ${id} not found.`);
     }
+    // החזרה ריקה (void) כפי שמתבקש מהקונטרולר
   }
 }

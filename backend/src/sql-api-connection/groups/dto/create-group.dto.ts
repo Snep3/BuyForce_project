@@ -1,21 +1,34 @@
 // src/groups/dto/create-group.dto.ts
 
+import { IsUUID, IsString, IsInt, IsDateString, IsIn, IsNotEmpty } from 'class-validator';
+import { Type } from 'class-transformer';
+
 export class CreateGroupDto {
-  // המפתח הראשי (אם נוצר בצד האפליקציה)
-  readonly id: string; 
-  
-  // מפתח זר למוצר
-  readonly product_id: string; 
-  
-  // סטטוס התחלתי (לדוגמה: 'DRAFT', 'OPEN').
-  // Status check: ARRAY['DRAFT','OPEN','REACHED_TARGET', 'LOCKED', 'CHARGED', 'FAILED', 'REFUNDED']
-  readonly status: string; 
-  
-  // כמות המשתתפים הנדרשת
-  readonly target_members: number; 
-  
-  // המועד האחרון להצטרפות
-  readonly deadline: Date; 
-  
-  // joined_count ו-created_at נוצרים אוטומטית.
+  @IsUUID() 
+  @IsNotEmpty()
+  readonly id: string; 
+  
+  @IsUUID()
+  @IsNotEmpty()
+  readonly productId: string; // ✅ Camel Case
+  
+  @IsIn(['DRAFT', 'OPEN', 'REACHED_TARGET', 'LOCKED', 'CHARGED', 'FAILED', 'REFUNDED']) 
+  @IsNotEmpty()
+  readonly status: string; 
+  
+  @Type(() => Number)
+  @IsInt()
+  @IsNotEmpty()
+  // 🛑 וודא שזה targetMembers ולא target_members
+  readonly targetMembers: number; // ✅ Camel Case
+  
+  @IsDateString()
+  @IsNotEmpty()
+  readonly deadline: Date; 
+
+  @Type(() => Number)
+  @IsInt()
+  @IsNotEmpty()
+  // 🛑 וודא שזה maxMembers ולא max_members
+  readonly maxMembers: number; // ✅ Camel Case
 }

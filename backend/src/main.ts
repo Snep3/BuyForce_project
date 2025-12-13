@@ -1,24 +1,40 @@
-// src/main.ts
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common'; // 1. ייבוא ה-ValidationPipe
+import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule);
 
-  // הוספת הגדרת ה-ValidationPipe
-  app.useGlobalPipes(new ValidationPipe({
-    // הופך את ה-Payload למופע של המחלקה (DTO), מה שמאפשר שימוש ב-Decorators
-    transform: true, 
-    // מסיר שדות שלא מוגדרים ב-DTO (מומלץ לאבטחה)
-    whitelist: true, 
-    // זורק שגיאה אם ה-Payload מכיל שדות שלא קיימים ב-DTO
-    forbidNonWhitelisted: true, 
-  }));
+  // 🟢 התיקון הקריטי ל-404: הגדרת Prefix גלובלי
+  // כל הנתיבים (Routes) של ה-Controllers יתחילו כעת ב- /sql-api-connection
+  app.setGlobalPrefix('sql-api-connection');
 
-  // שימוש במשתנה סביבה עבור הפורט, כפי שהיה בקובץ המקורי שלך
-  await app.listen(process.env.PORT ?? 3000); 
+  // --- הגדרות ValidationPipe (אבטחה ואימות קלט) ---
+  app.useGlobalPipes(new ValidationPipe({
+    // מאפשר להשתמש ב-DTOs כ-Instances של מחלקות
+    transform: true, 
+    // מונע קבלה של שדות לא מוגדרים ב-DTO
+    whitelist: true, 
+    // זורק שגיאה אם יש שדות מיותרים ב-Payload
+    forbidNonWhitelisted: true, 
+  }));
+
+  // --- הגדרות Swagger/OpenAPI (תיעוד API) ---
+  const config = new DocumentBuilder()
+    .setTitle('SQL API Connection')
+    .setDescription('API documentation for the SQL-backed NestJS application.')
+    .setVersion('1.0')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  // ה-Swagger UI יהיה נגיש בנתיב המלא: /sql-api-connection/api
+  SwaggerModule.setup('api', app, document); 
+
+  // --- הפעלת השרת ---
+  // מאזין לפורט שמוגדר במשתנה סביבה (PORT) או לפורט 3000 כברירת מחדל
+  await app.listen(process.env.PORT ?? 3000); 
 }
 
 bootstrap();

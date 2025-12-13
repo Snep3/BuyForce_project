@@ -1,42 +1,30 @@
-// src/entities/homepage-metric.entity.ts
+// src/sql-api-connection/entities/homepage_metrics.entity.ts
 
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
-import { Category } from './categories.entity'; // נדרש לקישור
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Category } from './categories.entity';
 
-@Entity('homepage_metrics') // 1. ממופה לטבלת 'homepage_metrics'
+@Entity('homepage_metrics')
 export class HomepageMetric {
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  // --- עמודות רגילות ---
+  // ✅ התיקון: הסרנו את הקישוט @Column
+  // עכשיו TypeORM יודע לנהל את המפתח הזר הזה רק דרך הקשר ManyToOne למטה.
+  category_id: number; 
+  
+  @ManyToOne(() => Category)
+  @JoinColumn({ name: 'category_id' }) // TypeORM משתמש בזה כדי לדעת איזה עמודה לשמור
+  category: Category;
 
-  // 2. id (PRIMARY KEY, integer, nextval)
-  @PrimaryGeneratedColumn()
-  id: number; //
+  @Column({ name: 'week_start', type: 'timestamp' })
+  week_start: Date;
 
-  // 3. category_id (FOREIGN KEY, integer, not null)
-  @Column({ type: 'integer', name: 'category_id', nullable: false })
-  categoryId: number; //
+  @Column({ name: 'joins_count', type: 'integer' })
+  joins_count: number;
 
-  // 4. week_start (date, not null)
-  @Column({ type: 'date', name: 'week_start', nullable: false })
-  weekStart: Date; //
-  
-  // 5. joins_count (integer, default 0)
-  @Column({ type: 'integer', nullable: false, default: 0, name: 'joins_count' })
-  joinsCount: number; //
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  gmv: number;
 
-  // 6. gmv (numeric(14,2), default 0)
-  // TypeORM ממפה numeric(P,S) ל-number/string
-  @Column({ type: 'numeric', precision: 14, scale: 2, nullable: false, default: 0 })
-  gmv: number; //
-
-  // 7. created_at (timestamp without time zone, default now())
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp without time zone' })
-  createdAt: Date; //
-  
-  // --- קישור Many-to-One (המפתח הזר) ---
-  
-  // 8. קישור לטבלת categories (homepage_metrics_category_id_fkey)
-  @ManyToOne(() => Category, (category) => category.homepageMetrics)
-  @JoinColumn({ name: 'category_id' }) 
-  category: Category; // אובייקט הקטגוריה המלא המקושר
+  @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  created_at: Date;
 }

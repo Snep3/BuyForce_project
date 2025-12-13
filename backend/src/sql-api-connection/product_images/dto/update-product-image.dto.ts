@@ -1,7 +1,11 @@
-// בתוך update-product-image.dto.ts (תיקון שמות לשמות הנכסים ב-Entity):
+import { IsOptional, IsString, IsInt } from 'class-validator';
 
 export class UpdateProductImageDto {
-  readonly imageUrl?: string;    // במקום image_url
-  readonly sortOrder?: number;  // במקום sort_order
-  // אסור לכלול כאן שדות מפתח זר אם הם אינם ניתנים לעדכון.
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
+
+  @IsOptional()
+  @IsInt()
+  sortOrder?: number;
 }
