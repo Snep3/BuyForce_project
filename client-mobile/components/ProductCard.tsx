@@ -1,17 +1,17 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router'; // <--- Import
+import { useRouter } from 'expo-router';
 
 interface ProductCardProps {
-  id: string; // ID הוא סטרינג
+  id: string;
   title: string;
   regularPrice: number;
   groupPrice: number;
   joinedCount: number;
   targetCount: number;
   progress: number;
-  image: any;
+  image: string | any; // תמיכה גם ב-URL וגם ב-require מקומי
   endsAt?: string;
 }
 
@@ -27,10 +27,10 @@ export default function ProductCard({
   endsAt
 }: ProductCardProps) {
   
-  const router = useRouter(); // <--- Hook
+  const router = useRouter();
 
-  // חישוב זמן נותר
   const getTimeLeft = (deadline: string) => {
+    if (!deadline) return "";
     const total = Date.parse(deadline) - Date.now();
     if (total <= 0) return "Ended";
     
@@ -41,14 +41,24 @@ export default function ProductCard({
     return `${hours}h left`; 
   };
 
+  // Safe Image Source Logic
+  const imageSource = typeof image === 'string' && image.startsWith('http') 
+    ? { uri: image } 
+    : image; // Fallback for local require() images
+
   return (
     <TouchableOpacity 
       style={styles.card}
-      // לחיצה מעבירה לעמוד המוצר עם ה-ID
-      onPress={() => router.push(`/product/${id}`)} 
+      onPress={() => router.push(`/product/${id}`)}
     >
       <View style={styles.imageContainer}>
-        <Image source={image} style={styles.image} resizeMode="cover" />
+        <Image 
+            source={imageSource} 
+            style={styles.image} 
+            resizeMode="cover"
+            // הגנה נוספת מפני קריסה בטעינת תמונה
+            defaultSource={{ uri: 'https://placehold.co/400' }} 
+        />
         
         {endsAt && (
             <View style={styles.timeBadge}>
@@ -68,13 +78,13 @@ export default function ProductCard({
 
         <View style={styles.progressContainer}>
           <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: `${Math.min(progress * 100, 100)}%` }]} />
+            <View style={[styles.progressBarFill, { width: `${Math.min((progress || 0) * 100, 100)}%` }]} />
           </View>
           <View style={styles.progressTextContainer}>
             <Text style={styles.progressText}>
               <Text style={{ fontWeight: 'bold', color: '#2f95dc' }}>{joinedCount}</Text>/{targetCount} joined
             </Text>
-            <Text style={styles.percentageText}>{Math.round(progress * 100)}%</Text>
+            <Text style={styles.percentageText}>{Math.round((progress || 0) * 100)}%</Text>
           </View>
         </View>
       </View>
@@ -82,7 +92,6 @@ export default function ProductCard({
   );
 }
 
-// Styles נשארים אותו דבר...
 const styles = StyleSheet.create({
   card: { width: 160, backgroundColor: '#fff', borderRadius: 12, marginRight: 15, marginBottom: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3, overflow: 'hidden' },
   imageContainer: { height: 100, width: '100%', backgroundColor: '#f0f0f0', position: 'relative' },

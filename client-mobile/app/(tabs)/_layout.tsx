@@ -33,11 +33,11 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="cart" // referes to cart.tsx
+        name="notifications" // referes to cart.tsx
         options={{
-          title: "Cart",  // refers to to whatever is shown in the header
+          title: "notifications",  // refers to to whatever is shown in the header
           tabBarIcon: ({ color }) => (
-            <Ionicons name="cart" size={24} color={color} />  // cart icon
+            <Ionicons name="notifications" size={24} color={color} />  // cart icon
           ),
         }}
       />

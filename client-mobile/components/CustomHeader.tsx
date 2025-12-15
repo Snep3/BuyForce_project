@@ -13,13 +13,6 @@ export default function CustomHeader() {
             <View style={styles.logoPlaceholder} /> 
             <Text style={styles.appName}>BuyForce</Text>
         </View>
-        
-        {/* צד ימין: כפתור התראות */}
-        <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications-outline" size={26} color="#333" />
-            <View style={styles.badge} />
-        </TouchableOpacity>
-
       </View>
     </SafeAreaView>
   );
