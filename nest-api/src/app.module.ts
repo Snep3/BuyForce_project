@@ -1,4 +1,5 @@
 // src/app.module.ts
+import { AdminModule } from './admin/admin.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
@@ -13,6 +14,7 @@ import { ProductsModule } from './products/products.module';
     DatabaseModule,
     UsersModule,
     ProductsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

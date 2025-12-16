@@ -1,15 +1,6 @@
 // src/users/users.controller.ts
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  Res,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
-import type { Response, Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('api/users')
@@ -18,72 +9,20 @@ export class UsersController {
 
   @Post('signup')
   async signup(
-    @Body('username') username: string,
-    @Body('email') email: string,
-    @Body('password') password: string,
-    @Res() res: Response,
+    @Body() body: { username: string; email: string; password: string },
   ) {
-    try {
-      const result = await this.usersService.signup(
-        username,
-        email,
-        password,
-      );
-      return res.status(201).json(result);
-    } catch (err: any) {
-      return res.status(400).json({ error: err.message });
-    }
+    return this.usersService.signup(body.username, body.email, body.password);
   }
 
   @Post('login')
-  async login(
-    @Body('email') email: string,
-    @Body('password') password: string,
-    @Res() res: Response,
-  ) {
-    try {
-      const result = await this.usersService.login(email, password);
-      return res.json(result);
-    } catch (err: any) {
-      return res.status(400).json({ error: err.message });
-    }
+  async login(@Body() body: { email: string; password: string }) {
+    return this.usersService.login(body.email, body.password);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('me')
-  async getMe(@Req() req: Request, @Res() res: Response) {
-    try {
-      const userId = (req as any).userId;
-      const user = await this.usersService.getMe(userId);
-      return res.json(user);
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message });
-    }
-  }
-
   @UseGuards(JwtAuthGuard)
-  @Post('me/favorites')
-  async addFavorite(
-    @Req() req: Request,
-    @Body('productId') productId: string,
-    @Res() res: Response,
-  ) {
-    try {
-      const userId = (req as any).userId;
-
-      if (!productId) {
-        return res
-          .status(400)
-          .json({ error: 'productId is required' });
-      }
-
-      const user = await this.usersService.addFavorite(
-        userId,
-        productId,
-      );
-      return res.json(user);
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message });
-    }
+  async me(@Req() req: any) {
+    const userId = req?.user?.id || req?.user?.userId;
+    return this.usersService.getMe(userId);
   }
 }

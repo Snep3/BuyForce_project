@@ -1,101 +1,76 @@
 // src/products/products.controller.ts
 import {
-  Body,
   Controller,
   Get,
-  Param,
   Post,
-  Res,
-  Req,
+  Param,
+  Body,
   UseGuards,
+  Req,
+  HttpCode,
+  HttpStatus,
+  Patch,
+   Delete,
 } from '@nestjs/common';
-import type { Response, Request } from 'express';
+import { AdminGuard } from '../auth/admin.guard';
 import { ProductsService } from './products.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CreateProductDto } from './dto/create-product.dto';
+import { AddCommentDto } from './dto/add-comment.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
+
 
 @Controller('api/products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
-  // GET /api/products
   @Get()
-  async getAll(@Res() res: Response) {
-    try {
-      const products = await this.productsService.findAll();
-      return res.json(products);
-    } catch (err: any) {
-      console.error(err);
-      return res.status(500).json({ error: err.message || 'Server error' });
-    }
+  @HttpCode(HttpStatus.OK)
+  async getAllProducts() {
+    return this.productsService.findAll();
   }
 
-  // GET /api/products/:id
   @Get(':id')
-  async getById(@Param('id') id: string, @Res() res: Response) {
-    try {
-      const product = await this.productsService.findById(id);
-      if (!product) {
-        return res.status(404).json({ error: 'Product not found' });
-      }
-      return res.json(product);
-    } catch (err: any) {
-      console.error(err);
-      return res.status(500).json({ error: err.message || 'Server error' });
-    }
+  @HttpCode(HttpStatus.OK)
+  async getProductById(@Param('id') id: string) {
+    return this.productsService.findById(id);
   }
 
-  // POST /api/products
-  @UseGuards(JwtAuthGuard)
-  @Post()
-  async create(
-    @Body('name') name: string,
-    @Body('price') price: number,
-    @Body('category') category: string,
-    @Body('stock') stock: number,
-    @Body('description') description: string,
-    @Res() res: Response,
-  ) {
-    try {
-      const product = await this.productsService.createProduct({
-        name,
-        price,
-        category,
-        stock,
-        description,
-      });
-      return res.status(201).json(product);
-    } catch (err: any) {
-      if (err.message === 'Name, price, and category are required') {
-        return res.status(400).json({ error: err.message });
-      }
-      console.error(err);
-      return res.status(500).json({ error: err.message || 'Server error' });
-    }
-  }
-
-  // POST /api/products/:id/comments
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/comments')
-  async addComment(
+    @Patch(':id')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @HttpCode(HttpStatus.OK)
+  async updateProduct(
     @Param('id') id: string,
-    @Body('content') content: string,
-    @Req() req: Request,
-    @Res() res: Response,
+    @Body() dto: UpdateProductDto,
   ) {
-    try {
-      const userId = (req as any).userId;
-      const product = await this.productsService.addComment(
-        id,
-        userId,
-        content,
-      );
-      return res.json(product);
-    } catch (err: any) {
-      if (err.message === 'Comment content required') {
-        return res.status(400).json({ error: err.message });
-      }
-      console.error(err);
-      return res.status(500).json({ error: err.message || 'Server error' });
-    }
+    return this.productsService.updateProduct(id, dto);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @HttpCode(HttpStatus.OK)
+  async deleteProduct(@Param('id') id: string) {
+    return this.productsService.deleteProduct(id);
+  }
+
+
+  @Post()
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @HttpCode(HttpStatus.CREATED)
+  async createProduct(@Body() dto: CreateProductDto) {
+    return this.productsService.createProduct(dto);
+  }
+
+  @Post(':id/comments')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.CREATED)
+  async addComment(
+    @Param('id') productId: string,
+    @Body() dto: AddCommentDto,
+    @Req() req: any,
+  ) {
+    // JwtAuthGuard שלך שם את המשתמש ב-req.user (לפי הקוד שראינו)
+    const userId = req?.user?.userId || req?.user?.id;
+    return this.productsService.addComment(productId, userId, dto.content);
   }
 }

@@ -31,7 +31,7 @@ export default function ProductDetailPage({ initialProduct }) {
     try {
       setSending(true);
       const res = await axios.post(
-        `${API_URL}/api/products/${product._id}/comments`,
+        `${API_URL}/api/products/${product.id}/comments`,
         { content: comment },
         {
           headers: {

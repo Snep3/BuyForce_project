@@ -22,14 +22,18 @@ export default function LoginPage() {
         password,
       });
 
-      // שומרים token + user ב-localStorage
+      // שמירת token + user
       if (typeof window !== "undefined") {
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("user", JSON.stringify(res.data.user));
       }
 
-      // אחרי התחברות – לעמוד מוצרים
-      router.push("/products");
+      // redirect לפי role
+      if (res.data.user?.is_admin) {
+        router.push("/admin/products");
+      } else {
+        router.push("/products");
+      }
     } catch (err) {
       console.error(err);
       setError(

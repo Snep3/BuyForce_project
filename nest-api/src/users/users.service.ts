@@ -1,95 +1,98 @@
 // src/users/users.service.ts
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { User, UserDocument } from './user.schema';
-import { Model } from 'mongoose';
+import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import * as jwt from 'jsonwebtoken';
+import * as bcrypt from 'bcrypt';
+import { User } from './user.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
 
   async signup(username: string, email: string, password: string) {
     if (!username || !email || !password) {
-      throw new Error('All fields are required');
+      throw new BadRequestException('All fields are required');
     }
 
-    const existing = await this.userModel.findOne({
-      $or: [{ email }, { username }],
+    const existing = await this.userRepo.findOne({
+      where: [{ email }, { username }],
     });
 
     if (existing) {
-      throw new Error('User already exists');
+      throw new BadRequestException('User already exists');
     }
 
-    const user = new this.userModel({ username, email, password });
-    await user.save();
+    const hashed = await bcrypt.hash(password, 10);
 
-    const token = this.signToken(user._id.toString());
+    const user = this.userRepo.create({
+      username,
+      email,
+      password: hashed,
+      is_admin: false, // default
+    });
+
+    const saved = await this.userRepo.save(user);
+
+    const token = this.signToken(saved.id, saved.is_admin);
 
     return {
       token,
       user: {
-        id: user._id.toString(),
-        username: user.username,
-        email: user.email,
+        id: saved.id,
+        username: saved.username,
+        email: saved.email,
+        is_admin: saved.is_admin,
       },
     };
   }
 
   async login(email: string, password: string) {
     if (!email || !password) {
-      throw new Error('Email and password required');
+      throw new BadRequestException('Email and password required');
     }
 
-    const user = await this.userModel.findOne({ email });
+    const user = await this.userRepo.findOne({ where: { email } });
     if (!user) {
-      throw new Error('Invalid credentials');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    // @ts-ignore
-    const isMatch = await user.matchPassword(password);
-    if (!isMatch) {
-      throw new Error('Invalid credentials');
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) {
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    const token = this.signToken(user._id.toString());
+    const token = this.signToken(user.id, user.is_admin);
 
     return {
       token,
       user: {
-        id: user._id.toString(),
+        id: user.id,
         username: user.username,
         email: user.email,
+        is_admin: user.is_admin,
       },
     };
   }
 
   async getMe(userId: string) {
-    const user = await this.userModel.findById(userId).select('-password');
-    return user;
-  }
-
-  async addFavorite(userId: string, productId: string) {
-    const updated = await this.userModel
-      .findByIdAndUpdate(
-        userId,
-        { $addToSet: { favorites: productId } },
-        { new: true },
-      )
-      .select('-password');
-
-    return updated;
-  }
-
-  private signToken(id: string) {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error('JWT_SECRET not set');
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
     }
 
-    return jwt.sign({ id }, secret, { expiresIn: '7d' });
+    // לא מחזירים סיסמה
+    const { password, ...safe } = user;
+    return safe;
+  }
+
+  private signToken(id: string, is_admin: boolean) {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error('JWT_SECRET not set');
+
+    return jwt.sign({ id, is_admin }, secret, { expiresIn: '7d' });
   }
 }

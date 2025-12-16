@@ -1,40 +1,33 @@
 // src/auth/jwt-auth.guard.ts
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest();
+    const auth = req.headers?.authorization || '';
 
-    const authHeader =
-      req.headers['authorization'] || req.headers['Authorization'];
-    if (!authHeader) {
-      throw new UnauthorizedException('No token provided');
+    if (!auth.startsWith('Bearer ')) {
+      throw new UnauthorizedException('Missing token');
     }
 
-    const parts = (authHeader as string).split(' ');
-    const token = parts.length === 2 ? parts[1] : null;
-    if (!token) {
-      throw new UnauthorizedException('No token provided');
-    }
+    const token = auth.slice(7);
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error('JWT_SECRET not set');
 
     try {
-      const secret = process.env.JWT_SECRET;
-      if (!secret) {
-        throw new Error('JWT_SECRET not set');
-      }
-      const decoded = jwt.verify(token, secret) as any;
+      const payload = jwt.verify(token, secret) as any;
 
-      (req as any).userId = decoded.id;
+      // חשוב: נשמור תאימות לשמות שהשתמשת בהם קודם
+      req.user = {
+        id: payload.id,
+        userId: payload.id,
+        is_admin: !!payload.is_admin,
+      };
 
       return true;
-    } catch (err) {
+    } catch {
       throw new UnauthorizedException('Invalid token');
     }
   }

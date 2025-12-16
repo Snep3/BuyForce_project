@@ -2,9 +2,13 @@
 import axios from "axios";
 import { API_URL } from "../../config/api";
 import Link from "next/link";
+import NavBar from "../../components/NavBar";
+
 
 export default function ProductsPage({ products }) {
   return (
+    <>
+    <NavBar />
     <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
       <h1>מוצרים</h1>
 
@@ -17,7 +21,7 @@ export default function ProductsPage({ products }) {
       <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "1fr" }}>
         {products.map((p) => (
           <div
-            key={p._id}
+            key={p.id}
             style={{
               border: "1px solid #ddd",
               padding: "1rem",
@@ -27,11 +31,12 @@ export default function ProductsPage({ products }) {
             <h3>{p.name}</h3>
             <p>מחיר: {p.price}₪</p>
             <p>קטגוריה: {p.category}</p>
-            <Link href={`/products/${p._id}`}>לפרטי מוצר ➜</Link>
+            <Link href={`/products/${p.id}`}>לפרטי מוצר ➜</Link>
           </div>
         ))}
       </div>
     </main>
+    </>
   );
 }
 

@@ -1,16 +1,17 @@
 // src/products/products.module.ts
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { Product, ProductSchema } from './product.schema';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Product } from './product.entity';
+import { Comment } from './comment.entity';
 import { ProductsService } from './products.service';
 import { ProductsController } from './products.controller';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AdminGuard } from '../auth/admin.guard';
+
 
 @Module({
-  imports: [
-    MongooseModule.forFeature([{ name: Product.name, schema: ProductSchema }]),
-  ],
-  providers: [ProductsService, JwtAuthGuard],
+  imports: [TypeOrmModule.forFeature([Product, Comment])],
+  providers: [ProductsService, JwtAuthGuard, AdminGuard],
   controllers: [ProductsController],
   exports: [ProductsService],
 })
