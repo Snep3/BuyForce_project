@@ -1,18 +1,29 @@
 import React from "react";
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import CustomHeader from "../../components/CustomHeader"; // Import the header
+import { useStore } from "../../store/useStore";
+import CustomHeader from "../../components/CustomHeader";
 
 export default function TabLayout() {
+  const isLoggedIn = useStore((state) => state.isLoggedIn);
+  const router = useRouter();
+
+  const requireAuth = (e: any) => {
+    if (!isLoggedIn) {
+      e.preventDefault();               // ⛔ stop tab navigation
+      router.push("/(auth)/login");     // 👉 go to login
+    }
+  };
+
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: "#2f95dc",
         tabBarInactiveTintColor: "gray",
-        // שימוש בקומפוננטת ההדר הגלובלית שלנו
         header: () => <CustomHeader />,
       }}
     >
+      {/* PUBLIC */}
       <Tabs.Screen
         name="index"
         options={{
@@ -22,6 +33,8 @@ export default function TabLayout() {
           ),
         }}
       />
+
+      {/* PROTECTED */}
       <Tabs.Screen
         name="groups"
         options={{
@@ -30,16 +43,18 @@ export default function TabLayout() {
             <Ionicons name="people" size={24} color={color} />
           ),
         }}
+        listeners={{ tabPress: requireAuth }}
       />
 
       <Tabs.Screen
-        name="notifications" // referes to cart.tsx
+        name="notifications"
         options={{
-          title: "notifications",  // refers to to whatever is shown in the header
+          title: "Notifications",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="notifications" size={24} color={color} />  // cart icon
+            <Ionicons name="notifications" size={24} color={color} />
           ),
         }}
+        listeners={{ tabPress: requireAuth }}
       />
 
       <Tabs.Screen
@@ -50,6 +65,7 @@ export default function TabLayout() {
             <Ionicons name="heart" size={24} color={color} />
           ),
         }}
+        listeners={{ tabPress: requireAuth }}
       />
 
       <Tabs.Screen
@@ -60,6 +76,7 @@ export default function TabLayout() {
             <Ionicons name="person" size={24} color={color} />
           ),
         }}
+        listeners={{ tabPress: requireAuth }}
       />
     </Tabs>
   );

@@ -1,93 +1,71 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
-import { Stack } from 'expo-router';
-import ProductCard from '../../components/ProductCard';
-import CustomHeader from '../../components/CustomHeader'; // החזרתי את השימוש ב-Header שלך
-import MOCK_PRODUCTS from '../../store/mockData';
+import React, { useState } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 
-export default function HomeScreen() {
-  
-  // Filter logic based on PRD: "Near Goal" [cite: 368]
-  const nearGoalProducts = MOCK_PRODUCTS.filter(p => (p.active_group?.progress_pct || 0) > 0.7);
-  const newArrivals = MOCK_PRODUCTS; // [cite: 370]
+export default function LoginScreen() {
+  const router = useRouter();
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* הסתרת ה-Header של המערכת כדי להציג את שלך */}
-      <Stack.Screen options={{ headerShown: false }} />
-      
-      {/* השימוש בקומפוננטה שלך */}
-      <CustomHeader />
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-        
-        {/* Section: Near Goal */}
-        <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Near Goal</Text>
-            <TouchableOpacity><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
-        </View>
-        <FlatList
-          horizontal
-          data={nearGoalProducts.length > 0 ? nearGoalProducts : MOCK_PRODUCTS}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ProductCard
-              id={item.id}
-              title={item.name}
-              image={item.image_url}
-              regularPrice={item.price_regular}
-              groupPrice={item.price_group}
-              joinedCount={item.active_group?.joined_count || 0}
-              targetCount={item.active_group?.target_members || 1}
-              progress={item.active_group?.progress_pct || 0}
-              endsAt={item.active_group?.deadline}
-            />
-          )}
-        />
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
 
-        {/* Section: New Arrivals */}
-        <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>New Arrivals</Text>
-            <TouchableOpacity><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
-        </View>
-        <FlatList
-          horizontal
-          data={newArrivals}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ProductCard
-              id={item.id}
-              title={item.name}
-              image={item.image_url}
-              regularPrice={item.price_regular}
-              groupPrice={item.price_group}
-              joinedCount={item.active_group?.joined_count || 0}
-              targetCount={item.active_group?.target_members || 1}
-              progress={item.active_group?.progress_pct || 0}
-              endsAt={item.active_group?.deadline}
-            />
-          )}
-        />
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
+    setLoading(true);
+    try {
+      // mock login
+      await new Promise(res => setTimeout(res, 800));
+
+      Alert.alert('Success', 'Logged in');
+
+      // 👈 go back to wherever the user came from
+      router.back();
+    } catch {
+      Alert.alert('Error', 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9f9f9' },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 10,
+  container: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
   },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#333' },
-  seeAll: { color: '#2f95dc', fontSize: 14, fontWeight: '600' },
-  listContent: { paddingHorizontal: 20 },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 30,
+    textAlign: 'center',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    padding: 12,
+    marginBottom: 15,
+    borderRadius: 8,
+    backgroundColor: 'white',
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
+}

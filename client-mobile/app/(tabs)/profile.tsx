@@ -53,7 +53,7 @@ export default function ProfileScreen() {
           onPress: () => {
             // כאן תהיה לוגיקת מחיקת טוקן
             console.log("User logged out");
-            router.replace('/auth/login'); // ניווט למסך התחברות (כשיהיה קיים)
+            router.replace('/(auth)/login'); // ניווט למסך התחברות (כשיהיה קיים)
           } 
         }
       ]
