@@ -45,6 +45,7 @@ export default function LoginScreen() {
      
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [userName, setUserName] = useState('');
 
   const [showRegister, setShowRegister] = useState(false);
 
@@ -58,8 +59,8 @@ export default function LoginScreen() {
      ========================= */
 
   const handleLogin = () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill email and password');
+    if (!email || !password || !userName) {
+      Alert.alert('Error', 'Please fill all fields');
       return;
     }
 
@@ -71,7 +72,7 @@ export default function LoginScreen() {
   };
 
   const handleRegister = () => {
-    if (!email || !password || !ageGroup || !techLevel || !occupation) {
+    if (!email || !password || !ageGroup || !techLevel || !occupation ||!userName) {
       Alert.alert('Error', 'Please fill all registration fields');
       return;
     }
@@ -128,6 +129,17 @@ export default function LoginScreen() {
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
+
+        
+      />
+
+       {/* USERNAME */}
+      <TextInput
+        style={styles.input}
+        placeholder="Username"
+        value={userName}
+        onChangeText={setUserName}
+        keyboardType="default"
       />
 
       {/* PASSWORD */}

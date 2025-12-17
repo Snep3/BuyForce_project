@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, SafeAreaVi
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
+
 // Mock User Data [cite: 1217-1223]
 const MOCK_USER = {
   name: "John Doe",
@@ -63,6 +64,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+
         
         {/* 1. User Header [cite: 463] */}
         <View style={styles.header}>
@@ -73,6 +75,10 @@ export default function ProfileScreen() {
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
+
+        
+
+        
 
         {/* 2. Account Section */}
         <View style={styles.section}>

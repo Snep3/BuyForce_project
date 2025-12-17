@@ -1,6 +1,8 @@
 import React from "react";
 import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { View, Text } from "react-native";
+
 import { useStore } from "../../store/useStore";
 import CustomHeader from "../../components/CustomHeader";
 
@@ -8,14 +10,15 @@ export default function TabLayout() {
   const isLoggedIn = useStore((state) => state.isLoggedIn);
   const router = useRouter();
 
-  const requireAuth = (e: any) => {
+  const guardTabPress = (e: any) => {
     if (!isLoggedIn) {
-      e.preventDefault();               // ⛔ stop tab navigation
-      router.push("/(auth)/login");     // 👉 go to login
+      e.preventDefault();
+      router.push("/(auth)/login");
     }
   };
 
   return (
+    
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: "#2f95dc",
@@ -23,7 +26,6 @@ export default function TabLayout() {
         header: () => <CustomHeader />,
       }}
     >
-      {/* PUBLIC */}
       <Tabs.Screen
         name="index"
         options={{
@@ -33,8 +35,20 @@ export default function TabLayout() {
           ),
         }}
       />
+          <Tabs.Screen
+        name="groups"
+        options={{
+          title: "My Groups",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="people" size={24} color={color} />
+          ),
+        }}
+        listeners={{
+          tabPress: (e) => guardTabPress(e),
+        }}
+      />
 
-      {/* PROTECTED */}
+
       <Tabs.Screen
         name="groups"
         options={{
@@ -43,7 +57,9 @@ export default function TabLayout() {
             <Ionicons name="people" size={24} color={color} />
           ),
         }}
-        listeners={{ tabPress: requireAuth }}
+        listeners={{
+          tabPress: (e) => guardTabPress(e),
+        }}
       />
 
       <Tabs.Screen
@@ -54,7 +70,9 @@ export default function TabLayout() {
             <Ionicons name="notifications" size={24} color={color} />
           ),
         }}
-        listeners={{ tabPress: requireAuth }}
+        listeners={{
+          tabPress: (e) => guardTabPress(e),
+        }}
       />
 
       <Tabs.Screen
@@ -65,7 +83,9 @@ export default function TabLayout() {
             <Ionicons name="heart" size={24} color={color} />
           ),
         }}
-        listeners={{ tabPress: requireAuth }}
+        listeners={{
+          tabPress: (e) => guardTabPress(e),
+        }}
       />
 
       <Tabs.Screen
@@ -76,7 +96,9 @@ export default function TabLayout() {
             <Ionicons name="person" size={24} color={color} />
           ),
         }}
-        listeners={{ tabPress: requireAuth }}
+        listeners={{
+          tabPress: (e) => guardTabPress(e),
+        }}
       />
     </Tabs>
   );
