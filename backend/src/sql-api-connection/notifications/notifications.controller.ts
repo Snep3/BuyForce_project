@@ -1,37 +1,49 @@
-// src/notifications/notifications.controller.ts
-
-import { Controller, Get, Post, Put, Delete, Param, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, HttpCode, HttpStatus, UseGuards, Req, UseInterceptors, ClassSerializerInterceptor } from '@nestjs/common';
 import { NotificationsService } from './notifications.service'; 
 import { Notification } from '../entities/notifications.entity'; 
 import { CreateNotificationDto } from './dto/create-notification.dto'; 
 import { UpdateNotificationDto } from './dto/update-notification.dto'; 
+import { NotificationListDto } from './dto/notification-list.dto'; 
+// 🔑 נניח שמייבאים AdminGuard:
+// import { AdminGuard } from '../../auth/admin.guard'; 
 
-@Controller('notifications') // ✅ הנתיב הראשי של ה-API: /notifications
+
+@Controller('notifications')
+@UseInterceptors(ClassSerializerInterceptor) 
+// ⚠️ כל המודול הזה כעת נגיש רק למנהלים/מפתחים:
+// @UseGuards(AdminGuard) 
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {} 
   
-  // POST /notifications (לרוב לשימוש פנימי או ע"י Admin)
+  // ----------------------------------------------------------------------
+  // 🟢 ENDPOINT לשליפת הכל (Admin/Monitoring)
+  // ----------------------------------------------------------------------
+  
+  // GET /notifications - שליפת כל ההתראות במערכת
+  @Get()
+  findAll(): Promise<Notification[]> {
+    // אין צורך בבדיקת userId אם ה-Guard עושה את העבודה
+    return this.notificationsService.findAll();
+  }
+  
+  // ----------------------------------------------------------------------
+  // 🟢 Endpoints ה-CRUD למפתחים (POST/PUT/DELETE)
+  // ----------------------------------------------------------------------
+  
+  // POST /notifications (ליצירת התראה על ידי מפתח)
   @Post()
   @HttpCode(HttpStatus.CREATED) 
   create(@Body() createNotificationDto: CreateNotificationDto): Promise<Notification> {
     return this.notificationsService.create(createNotificationDto);
   }
-    
-    // 🛑 התיקון: GET /notifications/:id (שליפת התראה בודדת)
-    @Get(':id')
-    findOne(@Param('id') id: string): Promise<Notification> {
-        // ההנחה היא שה-Service מכיל את מתודת findOne שכבר ראינו.
-        return this.notificationsService.findOne(id);
-    }
-    
-
-  // GET /notifications/user/:userId (שליפת כל ההתראות של משתמש)
-  @Get('user/:userId')
-  findAllByUserId(@Param('userId') userId: string): Promise<Notification[]> {
-    return this.notificationsService.findAllByUserId(userId);
+    
+  // GET /notifications/:id 
+  @Get(':id')
+  findOne(@Param('id') id: string): Promise<Notification> {
+    return this.notificationsService.findOne(id);
   }
 
-  // PUT /notifications/:id (למשל, כדי לסמן כ-READ)
+  // PUT /notifications/:id 
   @Put(':id')
   update(
     @Param('id') id: string, 
@@ -40,10 +52,12 @@ export class NotificationsController {
     return this.notificationsService.update(id, updateNotificationDto);
   }
 
-  // DELETE /notifications/:id
+  // DELETE /notifications/:id 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT) 
   remove(@Param('id') id: string): Promise<void> {
     return this.notificationsService.remove(id);
   }
+  
+  // 🛑 הוסר: /me, /user/:userId, /:id/read - כי הלקוח לא מבצע פעולות אלה.
 }

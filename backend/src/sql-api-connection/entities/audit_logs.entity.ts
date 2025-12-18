@@ -1,7 +1,7 @@
 // src/entities/audit_logs.entity.ts
 
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
-import { Admin } from './admins.entity'; // נדרש לקישור 
+import  { Admin } from './admins.entity'; // נדרש לקישור 
 
 @Entity('audit_logs') // ממופה לטבלת 'audit_logs'
 export class AuditLog {

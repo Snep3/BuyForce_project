@@ -21,7 +21,7 @@ export class CategoriesService {
   }
 
   // 2. READ ALL (שליפת כל הקטגוריות)
-  async findAll(): Promise<Category[]> {
+  async findAllForAdmin(): Promise<Category[]> {
     return this.categoriesRepository.find({ 
       // טוען את כל המוצרים המקושרים לקטגוריה
       relations: ['products'] 
@@ -56,4 +56,14 @@ export class CategoriesService {
         throw new NotFoundException(`Category with ID ${id} not found`);
     }
   }
+  async findAllForUi(): Promise<Category[]> {
+    return this.categoriesRepository.find({ 
+      // 🔑 משיכת שדות ספציפיים בלבד
+      select: ['id', 'name', 'slug', 'iconUrl', 'sortOrder'] as (keyof Category)[],
+      // 🔑 ודא שאין JOIN מיותר
+      relations: [], 
+      // 🔑 סידור לפי הסדר שנקבע
+      order: { sortOrder: 'ASC' }
+    });
+  }
 }

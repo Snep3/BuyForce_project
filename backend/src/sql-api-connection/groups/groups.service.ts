@@ -1,5 +1,3 @@
-// src/groups/groups.service.ts
-
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -20,20 +18,34 @@ export class GroupsService {
     return this.groupsRepository.save(newGroup);
   }
 
-  // 2. READ ALL (שליפת כל הקבוצות)
+  // 2. READ ALL (שליפת כל הקבוצות) - משמש עכשיו את GET /groups, מחזיר נתונים ל-GroupCardDto
   async findAll(): Promise<Group[]> {
     return this.groupsRepository.find({ 
-      // טוען את פרטי המוצר
-      relations: ['product'] 
+      // 🔑 חיוני לחישוב progressPercent ולמשיכת שם המוצר ב-GroupCardDto
+      relations: ['product'], 
+      // מיון: קבוצות עם יותר חברים ובדדליין קרוב יוצגו קודם
+      order: { joinedCount: 'DESC', deadline: 'ASC' } 
     });
   }
+  
+  // ----------------------------------------------------------------------
+  // 🟢 פונקציה חדשה: שליפה לפי סטטוס (לדוגמה, עבור GET /groups/open)
+  // ----------------------------------------------------------------------
+  async findAllByStatus(status: string): Promise<Group[]> {
+    return this.groupsRepository.find({ 
+      where: { status },
+      relations: ['product'], 
+      order: { joinedCount: 'DESC', deadline: 'ASC' } 
+    });
+  }
+  // ----------------------------------------------------------------------
 
   // 3. READ ONE
   async findOne(id: string): Promise<Group> {
     const group = await this.groupsRepository.findOne({ 
       where: { id },
-      // 🛑 תיקון: שימוש בשם היחס הנכון (memberships) כפי שהוגדר ב-groups.entity.ts
-      relations: ['product', 'memberships', 'transactions'] // ✅ תוקן!
+      // טוען את כל הקשרים הרלוונטיים לדף פרטי הקבוצה המלא
+      relations: ['product', 'memberships', 'transactions'] 
     });
     
     if (!group) {

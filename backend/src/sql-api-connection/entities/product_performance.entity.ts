@@ -22,8 +22,8 @@ export class ProductPerformance {
   @Column({ type: 'numeric', precision: 5, scale: 2, default: 0, name: 'conversion_rate' })
   conversionRate: number;
 
-  @Column({ type: 'timestamp with time zone', nullable: true, name: 'last_aggregated_at' })
-  lastAggregatedAt: Date;
+  @Column({ type: 'timestamp with time zone', nullable: true, name: 'lastUpdate' })
+  lastUpdated: Date;
 
   // --- קישור Many-to-One לטבלת products ---
   @ManyToOne(() => Product, (product) => product.performance)
