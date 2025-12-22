@@ -17,7 +17,6 @@ import { AdminGuard } from '../../auth/admin.guard';
 import { GroupsService } from '../../groups/groups.service';
 import { CreateGroupDto } from '../../groups/dto/create-group.dto';
 import { UpdateGroupDto } from '../../groups/dto/update-group.dto';
-
 @Controller('api/admin/groups')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class AdminGroupsController {

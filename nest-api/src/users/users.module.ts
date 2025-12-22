@@ -1,16 +1,20 @@
-// src/users/users.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
-import { User } from './user.entity';
+import { User } from './user.entity'; // מוודא ייבוא של ה-Entity ולא ה-Schema
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User])],
-  providers: [UsersService, JwtAuthGuard],
+  imports: [
+    // החלפת MongooseModule ב-TypeOrmModule עבור ישות המשתמש
+    TypeOrmModule.forFeature([User]),
+  ],
+  providers: [
+    UsersService, 
+    JwtAuthGuard
+  ],
   controllers: [UsersController],
-  exports: [UsersService],
+  exports: [UsersService], // חשוב לייצא כדי שה-AuthService יוכל להשתמש בו
 })
 export class UsersModule {}

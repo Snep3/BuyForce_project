@@ -18,7 +18,6 @@ import { ProductsService } from '../../products/products.service';
 
 import { CreateProductDto } from '../../products/dto/create-product.dto';
 import { UpdateProductDto } from '../../products/dto/update-product.dto';
-
 @Controller('api/admin/products')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class AdminProductsController {

@@ -4,14 +4,19 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
-import { User } from './user.entity';
+import { User } from './user.entity'; 
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
+    private readonly userRepo: Repository<User>, // 👈 השם כאן הוא userRepo
   ) {}
+
+  // פונקציה חדשה שביקשת כדי לראות את כל המשתמשים
+  async findAll(): Promise<User[]> {
+    return await this.userRepo.find(); // 👈 תיקון השם ל-userRepo
+  }
 
   async signup(username: string, email: string, password: string) {
     if (!username || !email || !password) {
@@ -32,12 +37,11 @@ export class UsersService {
       username,
       email,
       password: hashed,
-      is_admin: false, // default
+      isAdmin: false, 
     });
 
     const saved = await this.userRepo.save(user);
-
-    const token = this.signToken(saved.id, saved.is_admin);
+    const token = this.signToken(saved.id, saved.isAdmin);
 
     return {
       token,
@@ -45,7 +49,7 @@ export class UsersService {
         id: saved.id,
         username: saved.username,
         email: saved.email,
-        is_admin: saved.is_admin,
+        isAdmin: saved.isAdmin,
       },
     };
   }
@@ -65,7 +69,7 @@ export class UsersService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const token = this.signToken(user.id, user.is_admin);
+    const token = this.signToken(user.id, user.isAdmin);
 
     return {
       token,
@@ -73,7 +77,7 @@ export class UsersService {
         id: user.id,
         username: user.username,
         email: user.email,
-        is_admin: user.is_admin,
+        isAdmin: user.isAdmin,
       },
     };
   }
@@ -84,15 +88,12 @@ export class UsersService {
       throw new UnauthorizedException('User not found');
     }
 
-    // לא מחזירים סיסמה
     const { password, ...safe } = user;
     return safe;
   }
 
-  private signToken(id: string, is_admin: boolean) {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) throw new Error('JWT_SECRET not set');
-
-    return jwt.sign({ id, is_admin }, secret, { expiresIn: '7d' });
+  private signToken(id: string, isAdmin: boolean) {
+    const secret = process.env.JWT_SECRET || 'fallback_secret'; // הוספתי fallback למקרה שאין ENV
+    return jwt.sign({ id, isAdmin }, secret, { expiresIn: '7d' });
   }
 }

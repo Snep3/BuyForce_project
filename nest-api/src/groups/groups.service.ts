@@ -1,7 +1,6 @@
-// src/groups/groups.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DeepPartial } from 'typeorm';
 import { Group } from './group.entity';
 
 @Injectable()
@@ -11,43 +10,67 @@ export class GroupsService {
     private readonly groupRepo: Repository<Group>,
   ) {}
 
+  /**
+   * מחזיר את כל הקבוצות עם פרטי המוצר
+   */
   async findAll(): Promise<Group[]> {
-    return this.groupRepo.find();
+    return this.groupRepo.find({ relations: ['product'] });
   }
 
-  async create(data: {
-    name: string;
-    description?: string;
-    minParticipants?: number;
-    isActive?: boolean;
-  }): Promise<Group> {
-    const group = this.groupRepo.create({
-      name: data.name,
-      description: data.description,
-      minParticipants: data.minParticipants ?? 1,
-      isActive: data.isActive ?? true,
+  /**
+   * מחזיר קבוצות לפי סטטוס פעילות
+   */
+  async findAllByStatus(status: string): Promise<Group[]> {
+    const isActive = status === 'OPEN';
+    return this.groupRepo.find({ 
+      where: { status: status.toUpperCase() }, // המרה לאותיות גדולות וכל הסטטוסים בקונטרולר
+      relations: ['product'] 
     });
-
-    return this.groupRepo.save(group);
   }
 
-  async update(id: string, patch: Partial<Group>): Promise<Group> {
-    const group = await this.groupRepo.findOne({ where: { id } });
-    if (!group) throw new NotFoundException('Group not found');
-
-    if (patch.name !== undefined) group.name = patch.name;
-    if (patch.description !== undefined) group.description = patch.description;
-    if (patch.minParticipants !== undefined) group.minParticipants = patch.minParticipants;
-    if (patch.isActive !== undefined) group.isActive = patch.isActive;
-
-    return this.groupRepo.save(group);
+  /**
+   * מחזיר אובייקט בודד
+   * וודא שבישות (Entity) השדה נקרא 'memberships'
+   */
+  async findOne(id: string): Promise<Group> {
+    const group = await this.groupRepo.findOne({ 
+      where: { id: id as any }, 
+      relations: ['product', 'memberships'] 
+    });
+    
+    if (!group) {
+      throw new NotFoundException(`Group with ID ${id} not found`);
+    }
+    
+    return group;
   }
 
-  async remove(id: string): Promise<{ deleted: true }> {
-    const group = await this.groupRepo.findOne({ where: { id } });
-    if (!group) throw new NotFoundException('Group not found');
+  /**
+   * יצירת קבוצה חדשה
+   * ה-Casting (as Group) בסוף פותר את שגיאת ה-Type 'Group[]' is missing...
+   */
+  async create(data: DeepPartial<Group>): Promise<Group> {
+    const groupInstance = this.groupRepo.create(data); 
+    // אנחנו מכריחים את הטיפוס להיות אובייקט בודד כי save יכול להחזיר גם מערך
+    const savedGroup = await this.groupRepo.save(groupInstance);
+    return savedGroup as Group;
+  }
 
+  /**
+   * עדכון קבוצה קיימת
+   */
+  async update(id: string, patch: DeepPartial<Group>): Promise<Group> {
+    await this.findOne(id); // בדיקת קיום
+    await this.groupRepo.update(id, patch);
+    const updated = await this.findOne(id);
+    return updated as Group;
+  }
+
+  /**
+   * מחיקת קבוצה
+   */
+  async remove(id: string): Promise<void> {
+    const group = await this.findOne(id);
     await this.groupRepo.remove(group);
-    return { deleted: true };
   }
 }

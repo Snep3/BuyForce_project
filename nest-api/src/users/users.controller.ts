@@ -25,4 +25,8 @@ export class UsersController {
     const userId = req?.user?.id || req?.user?.userId;
     return this.usersService.getMe(userId);
   }
+  @Get()
+findAll() {
+  return this.usersService.findAll();
+}
 }
