@@ -23,6 +23,7 @@ docker run --name buyforce-postgres ^
   -e POSTGRES_DB=buyforce ^
   -p 5432:5432 ^
   -d postgres:16
+
  
 
 
