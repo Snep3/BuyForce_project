@@ -19,7 +19,7 @@
 ```bash
 docker run --name buyforce-postgres ^
   -e POSTGRES_USER=postgres ^
-  -e POSTGRES_PASSWORD=postgres ^
+  -e POSTGRES_PASSWORD=123456 ^
   -e POSTGRES_DB=buyforce ^
   -p 5432:5432 ^
   -d postgres:16
@@ -44,7 +44,7 @@ buyforce-postgres
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
-DB_PASSWORD=postgres
+DB_PASSWORD=123456
 DB_DATABASE=buyforce
  
 
