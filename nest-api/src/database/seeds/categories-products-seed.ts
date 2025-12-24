@@ -193,21 +193,22 @@ console.log('👥 יוצר משתמשים...');
             name: 'קבוצת אוזניות ANC', // <--- הוסף שם
             description: 'רכישה קבוצתית לאוזניות המבטלות רעשים', // <--- הוסף תיאור
             status: 'OPEN', 
-            joinedCount: 5, 
-            targetMembers: ancHeadphones.minMembers, 
+            joined_count: 5, 
+            target_members: ancHeadphones.minMembers, 
             maxMembers: ancHeadphones.maxMembers, 
-            deadline: deadline 
-        },
+            deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+    // הסבר: עכשיו + (10 ימים * 24 שעות * 60 דקות * 60 שניות * 1000 מילישניות)  
+          },
         { 
             id: uuidv4(), 
             productId: smartWatch.id, 
             name: 'קבוצת שעונים חכמים', 
             description: 'הדור הבא של השעונים החכמים במחיר קבוצתי',
             status: 'OPEN', 
-            joinedCount: 14, 
-            targetMembers: smartWatch.minMembers, 
+            joined_count: 14, 
+            target_members: smartWatch.minMembers, 
             maxMembers: smartWatch.maxMembers, 
-            deadline: addDays(new Date(), 1) 
+            deadline: addDays(new Date(), 20) 
         },
         { 
             id: uuidv4(), 
@@ -215,8 +216,8 @@ console.log('👥 יוצר משתמשים...');
             name: 'קבוצת טלפון דגל X90', 
             description: 'הזדמנות אחרונה לטלפון החדש',
             status: 'LOCKED', 
-            joinedCount: flagshipPhone.minMembers, 
-            targetMembers: flagshipPhone.minMembers, 
+            joined_count: flagshipPhone.minMembers, 
+            target_members: flagshipPhone.minMembers, 
             maxMembers: flagshipPhone.maxMembers, 
             deadline: passedDeadline, 
             reachedTargetAt: passedDeadline, 
@@ -228,11 +229,11 @@ console.log('👥 יוצר משתמשים...');
             name: 'קבוצת לפטופ גיימינג', 
             description: 'מחשב חזק במיוחד לגיימרים',
             status: 'FAILED', 
-            joinedCount: 2, 
-            targetMembers: gamingLaptop.minMembers, 
+            joined_count: 2, 
+            target_members: gamingLaptop.minMembers, 
             maxMembers: gamingLaptop.maxMembers, 
-            deadline: passedDeadline, 
-            failedAt: passedDeadline 
+deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+// הסבר: עכשיו + (10 ימים * 24 שעות * 60 דקות * 60 שניות * 1000 מילישניות)            failedAt: passedDeadline 
         },
     ];
     const savedGroups = await groupRepository.save(groupRepository.create(groupsData));

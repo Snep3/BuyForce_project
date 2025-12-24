@@ -21,6 +21,7 @@ import { group } from 'console';
 import { GroupsModule } from './groups/groups.module';
 import { GroupMembershipsModule } from './group_memberships/group_memberships.module';
 import { AuditLogsModule } from './audit_logs/audit_logs.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 
 @Module({
@@ -43,6 +44,7 @@ import { AuditLogsModule } from './audit_logs/audit_logs.module';
     GroupsModule,
     GroupMembershipsModule,
     AuditLogsModule,
+    ScheduleModule.forRoot() // הוספת מודול התזמון
   
   ],
   controllers: [AppController],

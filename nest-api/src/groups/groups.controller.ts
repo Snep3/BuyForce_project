@@ -4,63 +4,70 @@ import { Group } from '../groups/group.entity';
 import { CreateGroupDto } from './dto/create-group.dto'; 
 import { UpdateGroupDto } from './dto/update-group.dto'; 
 import { GroupCardDto } from './dto/group-card.dto';
+
 @Controller('groups')
 @UseInterceptors(ClassSerializerInterceptor) 
 export class GroupsController {
-  constructor(private readonly groupsService: GroupsService) {} 
-  
-  // ----------------------------------------------------------------------
-  // 🟢 Endpoints אופטימליים ל-Web/App
-  // ----------------------------------------------------------------------
-  
-  // GET /groups (שליפת רשימת כרטיסי קבוצות לדף הבית)
-  @Get()
-  @SerializeOptions({ type: GroupCardDto })
-  async findAll(): Promise<GroupCardDto[]> {
-    const groups = await this.groupsService.findAll();
-    // 🟢 תיקון שגיאה TS2352: המרה כפולה (as unknown as GroupCardDto[])
-    return groups as unknown as GroupCardDto[]; 
-  }
+  constructor(private readonly groupsService: GroupsService) {} 
+  
+  // --- 🟢 קודם כל הנתיבים הסטטיים (בלי פרמטרים) ---
 
-  // GET /groups/open (הוספת סינון לקבוצות פתוחות בלבד)
-  @Get('open')
-  @SerializeOptions({ type: GroupCardDto }) 
-  async findAllOpen(): Promise<GroupCardDto[]> {
-    const groups = await this.groupsService.findAllByStatus('OPEN');
-    // 🟢 תיקון שגיאה TS2352: המרה כפולה (as unknown as GroupCardDto[])
-    return groups as unknown as GroupCardDto[]; 
-  }
-  
-  // ----------------------------------------------------------------------
-  // --- Endpoints CRUD קיימים ---
-  // ----------------------------------------------------------------------
-  
-  // POST /groups
-  @Post()
-  @HttpCode(HttpStatus.CREATED) 
-  create(@Body() createGroupDto: CreateGroupDto): Promise<Group> {
-    return this.groupsService.create(createGroupDto);
-  }
+  // שליפת קבוצות קרובות ליעד
+  @Get('near-goal')
+  async getNearGoal() {
+    return this.groupsService.getGroupsNearGoal();
+  }
 
-  // GET /groups/:id
-  @Get(':id')
-  findOne(@Param('id') id: string): Promise<Group> {
-    return this.groupsService.findOne(id);
-  }
-  
-  // PUT /groups/:id
-  @Put(':id')
-  update(
-    @Param('id') id: string, 
-    @Body() updateGroupDto: UpdateGroupDto
-  ): Promise<Group> {
-    return this.groupsService.update(id, updateGroupDto);
-  }
+  // שליפת קבוצות פתוחות בלבד
+  @Get('open')
+  @SerializeOptions({ type: GroupCardDto }) 
+  async findAllOpen(): Promise<GroupCardDto[]> {
+    const groups = await this.groupsService.findAllByStatus('OPEN');
+    return groups as unknown as GroupCardDto[]; 
+  }
 
-  // DELETE /groups/:id
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT) 
-  remove(@Param('id') id: string): Promise<void> {
-    return this.groupsService.remove(id);
-  }
+  // שליפת כל הקבוצות
+  @Get()
+  @SerializeOptions({ type: GroupCardDto })
+  async findAll(): Promise<GroupCardDto[]> {
+    const groups = await this.groupsService.findAll();
+    return groups as unknown as GroupCardDto[]; 
+  }
+
+  // --- 🔵 עכשיו הנתיבים עם פרמטרים (:id) ---
+
+  // שליפת קבוצה לפי ID
+  @Get(':id')
+  async findOne(@Param('id') id: string): Promise<Group> {
+    return this.groupsService.findOne(id);
+  }
+
+  // יצירת קבוצה
+  @Post()
+  @HttpCode(HttpStatus.CREATED) 
+  create(@Body() createGroupDto: CreateGroupDto): Promise<Group> {
+    return this.groupsService.create(createGroupDto);
+  }
+
+  // הצטרפות לקבוצה
+  @Post(':id/join')
+  async joinGroup(@Param('id') id: string) {
+    return this.groupsService.incrementJoinedCount(id);
+  }
+
+  // עדכון קבוצה
+  @Put(':id')
+  update(
+    @Param('id') id: string, 
+    @Body() updateGroupDto: UpdateGroupDto
+  ): Promise<Group> {
+    return this.groupsService.update(id, updateGroupDto);
+  }
+
+  // מחיקת קבוצה
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT) 
+  remove(@Param('id') id: string): Promise<void> {
+    return this.groupsService.remove(id);
+  }
 }

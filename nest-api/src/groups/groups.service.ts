@@ -1,36 +1,37 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DeepPartial } from 'typeorm';
-import { Group } from './group.entity';
+import { Repository, DeepPartial, LessThan } from 'typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { Group, GroupStatus } from './group.entity';
 
 @Injectable()
 export class GroupsService {
+  private readonly logger = new Logger(GroupsService.name);
+
   constructor(
     @InjectRepository(Group)
     private readonly groupRepo: Repository<Group>,
   ) {}
 
   /**
-   * מחזיר את כל הקבוצות עם פרטי המוצר
+   * Returns all groups with products
    */
   async findAll(): Promise<Group[]> {
     return this.groupRepo.find({ relations: ['product'] });
   }
 
   /**
-   * מחזיר קבוצות לפי סטטוס פעילות
+   * Returns groups by status
    */
   async findAllByStatus(status: string): Promise<Group[]> {
-    const isActive = status === 'OPEN';
     return this.groupRepo.find({ 
-      where: { status: status.toUpperCase() }, // המרה לאותיות גדולות וכל הסטטוסים בקונטרולר
+      where: { status: status.toUpperCase() as any }, 
       relations: ['product'] 
     });
   }
 
   /**
-   * מחזיר אובייקט בודד
-   * וודא שבישות (Entity) השדה נקרא 'memberships'
+   * Find single group
    */
   async findOne(id: string): Promise<Group> {
     const group = await this.groupRepo.findOne({ 
@@ -46,31 +47,98 @@ export class GroupsService {
   }
 
   /**
-   * יצירת קבוצה חדשה
-   * ה-Casting (as Group) בסוף פותר את שגיאת ה-Type 'Group[]' is missing...
+   * Create a new group
    */
   async create(data: DeepPartial<Group>): Promise<Group> {
     const groupInstance = this.groupRepo.create(data); 
-    // אנחנו מכריחים את הטיפוס להיות אובייקט בודד כי save יכול להחזיר גם מערך
     const savedGroup = await this.groupRepo.save(groupInstance);
     return savedGroup as Group;
   }
 
   /**
-   * עדכון קבוצה קיימת
+   * Update existing group
    */
   async update(id: string, patch: DeepPartial<Group>): Promise<Group> {
-    await this.findOne(id); // בדיקת קיום
+    await this.findOne(id); 
     await this.groupRepo.update(id, patch);
-    const updated = await this.findOne(id);
-    return updated as Group;
+    return this.findOne(id);
   }
 
   /**
-   * מחיקת קבוצה
+   * Remove group
    */
   async remove(id: string): Promise<void> {
     const group = await this.findOne(id);
     await this.groupRepo.remove(group);
+  }
+
+  /**
+   * Increments member count AND updates status immediately if goal reached
+   */
+  async incrementJoinedCount(id: string): Promise<Group> {
+    const group = await this.findOne(id);
+
+    if (group.status !== GroupStatus.OPEN) {
+      throw new BadRequestException(`Cannot join group with status: ${group.status}`);
+    }
+
+    // Check deadline before incrementing
+    const now = new Date();
+    if (group.deadline && now > new Date(group.deadline)) {
+      group.status = GroupStatus.FAILED;
+      await this.groupRepo.save(group);
+      throw new BadRequestException('Deadline has passed, group failed.');
+    }
+
+    group.joined_count = (group.joined_count || 0) + 1;
+
+    // IMMEDIATE UPDATE: If target reached, set to COMPLETED
+    if (group.joined_count >= group.target_members) {
+      group.status = GroupStatus.COMPLETED;
+      this.logger.log(`Group ${id} reached target and is now COMPLETED.`);
+    }
+
+    return this.groupRepo.save(group);
+  }
+
+  /**
+   * Automated Cron Job: Runs every hour
+   * Checks for expired groups and sets them to FAILED if goal not reached
+   */
+   @Cron(CronExpression.EVERY_HOUR)
+  async handleCron() {
+    this.logger.log('Running automated status check...');
+    const now = new Date();
+
+    const expiredGroups = await this.groupRepo.find({
+      where: {
+        status: GroupStatus.OPEN,
+        deadline: LessThan(now),
+      },
+    });
+
+    for (const group of expiredGroups) {
+      if (group.joined_count < group.target_members) {
+        group.status = GroupStatus.FAILED;
+        await this.groupRepo.save(group);
+        this.logger.log(`Group ${group.name} set to FAILED due to deadline.`);
+      } else {
+        // Safety check: if reached target but cron caught it first
+        group.status = GroupStatus.COMPLETED;
+        await this.groupRepo.save(group);
+      }
+    }
+  }
+
+  /**
+   * Groups near goal (2 or less members away)
+   */
+  async getGroupsNearGoal() {
+    return await this.groupRepo
+      .createQueryBuilder('group')
+      .where('group.status = :status', { status: GroupStatus.OPEN })
+      .andWhere('group.target_members - group.joined_count <= 2') 
+      .andWhere('group.target_members - group.joined_count > 0')
+      .getMany();
   }
 }

@@ -8,6 +8,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import {Expose} from 'class-transformer';
 import { Transaction } from '../transactions/transactions.entity';
 import { GroupMembership } from '../group_memberships/group_memberships.entity';
 import { Product } from '../products/product.entity'; // תיקון נתיב הייבוא
@@ -34,17 +35,36 @@ export class Group {
   @Column({ name: 'status', type: 'character varying', length: 20, default: 'OPEN' })
   status: string;
 
-  @Column({ name: 'joined_count', type: 'integer', default: 0 })
-  joinedCount: number;
 
-  @Column({ name: 'target_members', type: 'integer', default: 1 })
-  targetMembers: number;
 
   @Column({ name: 'active_group', type: 'boolean', default: true })
   activeGroup: boolean;
 
   @Column({ type: 'uuid', name: 'product_id' })
   productId: string;
+// src/groups/group.entity.ts
+
+@Column({ type: 'int', default: 0 })
+joined_count: number;
+
+@Column({ type: 'int', default: 10 }) // ברירת מחדל של 10 משתתפים
+target_members: number;
+
+@Column({ type: 'timestamp', nullable: true })
+deadline: Date;
+
+@Expose()
+  get progress_pct(): number {
+    if (!this.target_members || this.target_members === 0) return 0;
+    
+    const percentage = (this.joined_count / this.target_members) * 100;
+    
+    // מחזיר מספר עגול (למשל 67 במקום 66.666)
+    return Math.round(percentage);
+  }
+
+// src/groups/group.entity.ts
+
 
   // --- יחסים (Relations) ---
 

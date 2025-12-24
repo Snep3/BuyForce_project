@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Product } from './product.entity';
 import { Comment } from './comment.entity';
 import { Category } from '../categories/categories.entity'; 
+import { GroupStatus } from '../groups/group.entity'; // וודא שהנתיב נכון אצלך
 
 @Injectable()
 export class ProductsService {
@@ -30,16 +31,20 @@ export class ProductsService {
   }
 
   async findAll(): Promise<any[]> {
-    const products = await this.productRepo.find({ relations: ['category'] });
+    // הוספנו groups גם כאן כדי שדף הבית יוכל להציג סטטוס קבוצה לכל מוצר
+    const products = await this.productRepo.find({ relations: ['category', 'groups'] });
     return products.map((product) => this.mapProductForFrontend(product));
   }
 
   async findById(id: string): Promise<any> {
     const product = await this.productRepo.findOne({
       where: { id: id as any },
-      relations: ['comments', 'category'],
+      // טעינת הקבוצות יחד עם המוצר
+      relations: ['comments', 'category', 'groups'],
     });
+    
     if (!product) throw new NotFoundException('Product not found');
+    
     return this.mapProductForFrontend(product);
   }
 
@@ -50,7 +55,6 @@ export class ProductsService {
     stock?: number;
     description?: string;
   }): Promise<any> {
-    // רק שמות, מחיר וקטגוריה הם חובה
     if (!data.name || data.price == null || !data.category) {
       throw new BadRequestException('Required fields missing');
     }
@@ -61,13 +65,12 @@ export class ProductsService {
       name: data.name,
       priceRegular: data.price,
       category: category,
-      // וידוא ערכי ברירת מחדל: 0 למלאי ומחרוזת ריקה לתיאור
       stock: (data.stock !== undefined && data.stock !== null) ? data.stock : 0,
       description: data.description ?? '', 
     });
 
     const savedProduct = await this.productRepo.save(product);
-    return this.mapProductForFrontend(savedProduct);
+    return this.findById(savedProduct.id); // משתמש ב-findById כדי לקבל אובייקט מלא עם יחסים
   }
 
   async updateProduct(id: string, patch: any): Promise<any> {
@@ -80,13 +83,11 @@ export class ProductsService {
     if (patch.name !== undefined) product.name = patch.name;
     if (patch.price !== undefined) product.priceRegular = patch.price;
     if (patch.category !== undefined) product.category = await this.resolveCategory(patch.category);
-    
-    // מאפשר לעדכן ל-0 או למחרוזת ריקה
     if (patch.stock !== undefined) product.stock = patch.stock ?? 0;
     if (patch.description !== undefined) product.description = patch.description ?? '';
 
-    const updated = await this.productRepo.save(product);
-    return this.mapProductForFrontend(updated);
+    await this.productRepo.save(product);
+    return this.findById(id);
   }
 
   async addComment(productId: string, userId: string, content: string): Promise<any> {
@@ -106,11 +107,34 @@ export class ProductsService {
     return { deleted: true };
   }
 
+  /**
+   * ממפה את המוצר לפורמט שה-Frontend צריך, כולל הקבוצה הפעילה
+   */
   private mapProductForFrontend(product: Product) {
+    // מציאת הקבוצה הראשונה שהיא OPEN
+    const activeGroup = product.groups?.find(
+      (group) => group.status === GroupStatus.OPEN
+    ) || null;
+
     return {
-      ...product,
+      id: product.id,
+      name: product.name,
+      description: product.description,
       price: product.priceRegular,
+      stock: product.stock,
       category: product.category?.name || 'General',
+      comments: product.comments || [],
+      // איחוד נתוני הקבוצה הפעילה לתוך המוצר
+      activeGroup: activeGroup ? {
+        id: activeGroup.id,
+        joined_count: activeGroup.joined_count,
+        target_members: activeGroup.target_members,
+        progress_pct: activeGroup.progress_pct, // יופיע ב-JSON בגלל @Expose ב-Entity
+        deadline: activeGroup.deadline,
+        status: activeGroup.status
+      } : null,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
     };
   }
 }

@@ -28,6 +28,7 @@ export class ProductsController {
       return res.status(500).json({ error: err.message || 'Server error' });
     }
   }
+  
 
   // GET /api/products/:id
   @Get(':id')

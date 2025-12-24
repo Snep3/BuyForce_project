@@ -1,6 +1,7 @@
 // src/groups/dto/create-group.dto.ts
-import { IsString, IsNotEmpty, IsOptional, IsInt, Min, IsBoolean, IsEnum, IsUUID } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsInt, Min, IsBoolean, IsEnum, IsUUID, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsDateString } from 'class-validator';
 
 // הגדרת הסטטוסים המותרים כדי למנוע כפילויות ושגיאות כתיב
 export enum GroupStatus {
@@ -40,4 +41,21 @@ export class CreateGroupDto {
   @IsUUID()
   @IsNotEmpty()
   productId: string;
+
+  @IsOptional()
+@IsNumber()
+joined_count: number;
+
+
+  @IsNumber()
+  @IsNotEmpty()
+  target_members: number; // חובה לקבוע יעד כשיוצרים קבוצה
+
+@IsDateString() // וולידציה שהתאריך נשלח בפורמט תקין (ISO)
+@IsOptional()
+deadline?: Date;
+
+
+
 }
+
