@@ -20,7 +20,8 @@ export default function App({ Component, pageProps }) {
     if (!isAdminRoute) return;
 
     const { token, user } = getAuth();
-    if (!token || !user?.is_admin) {
+    const isUserAdmin = user?.is_admin || user?.isAdmin;
+    if (!token || !isUserAdmin) {
       router.replace("/login");
     }
   }, [router.pathname]);

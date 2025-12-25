@@ -1,5 +1,4 @@
-// src/products/dto/create-product.dto.ts
-import { IsString, IsNotEmpty, IsNumber, IsOptional, Min, IsInt } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, Min, IsInt, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateProductDto {
@@ -16,14 +15,13 @@ export class CreateProductDto {
   @IsNotEmpty()
   category: string;
 
+  @IsOptional() // מאפשר לשדה להיות חסר בבקשה
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  @IsOptional()
-  stock?: number;
+  stock?: number; 
 
+  @IsOptional() // מאפשר לתיאור להיות ריק או חסר
   @IsString()
-  @IsOptional()
-  description?: string;
+  description?: string; 
 }
-

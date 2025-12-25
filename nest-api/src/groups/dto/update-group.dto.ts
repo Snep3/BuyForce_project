@@ -1,6 +1,9 @@
 // src/groups/dto/update-group.dto.ts
-import { IsString, IsOptional, IsInt, Min, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsInt, Min, IsBoolean, IsEnum, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
+// ייבוא ה-Enum מה-Create DTO (או מהקובץ הנפרד אם יצרת אחד)
+import { GroupStatus } from './create-group.dto';
+import { IsDateString } from 'class-validator';
 
 export class UpdateGroupDto {
   @IsString()
@@ -21,4 +24,18 @@ export class UpdateGroupDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  // הוספת אפשרות לעדכן את הסטטוס
+  @IsEnum(GroupStatus)
+  @IsOptional()
+  status?: GroupStatus;
+
+ @IsOptional()
+@IsNumber()
+joined_count?: number;
+
+@IsDateString()
+@IsOptional()
+deadline?: Date;
+
 }

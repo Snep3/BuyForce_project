@@ -1,4 +1,3 @@
-// src/products/dto/update-product.dto.ts
 import { IsString, IsOptional, IsNumber, Min, IsInt } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -13,9 +12,10 @@ export class UpdateProductDto {
   @IsOptional()
   price?: number;
 
-  @IsString()
+  @Type(() => Number)
+  @IsInt()
   @IsOptional()
-  category?: string;
+  categoryId?: number;
 
   @Type(() => Number)
   @IsInt()

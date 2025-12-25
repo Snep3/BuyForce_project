@@ -24,3 +24,6 @@ pnpm-debug.log*
 
 // קבצים זמניים
 express-api/
+
+# Snyk Security Extension - AI Rules (auto-generated)
+.github/instructions/snyk_rules.instructions.md
