@@ -55,15 +55,17 @@ Backend – קובץ nest-api/.env
 יש ליצור קובץ .env בתוך תיקיית nest-api
 (הקובץ לא עולה ל־Git):
 
-PORT=4000
 
 DB_HOST=localhost
-DB_PORT=5432
+DB_PORT=5438
 DB_USER=postgres
-DB_PASSWORD=postgres
-DB_DATABASE=buyforce
+DB_PASSWORD=123456
+DB_DATABASE=BuyForce_sql
 
-JWT_SECRET=change_me
+
+#JWT
+PORT=4000
+JWT_SECRET=dev_SECRET_9f3b2a1c7d8e4f6b0c5a2e9d3f1b7c8
 
 הערות:
 
