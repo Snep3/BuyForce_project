@@ -18,7 +18,7 @@ import { Group } from '../groups/group.entity';
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
         host: config.get<string>('DB_HOST', 'localhost'),
-        port: config.get<number>('DB_PORT', 5432),
+        port: config.get<number>('DB_PORT', 5438),
         username: config.get<string>('DB_USER', 'postgres'),
         password: config.get<string>('DB_PASSWORD', '123456'),
         database: config.get<string>('DB_DATABASE', 'BuyForce_sql'),

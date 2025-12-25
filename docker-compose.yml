@@ -3,16 +3,16 @@ version: "3.9"
 services:
   postgres:
     image: postgres:16
-    container_name: my-postgres
+    container_name: my-postgres-fresh
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 123456
-      POSTGRES_DB: BuyForce_sql   # שם ה-DB שלך
+      POSTGRES_DB: BuyForce_sql
     ports:
-      - "5432:5432"
+      - "5438:5432"  # Using port 5438 to guarantee no conflicts
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata_fresh:/var/lib/postgresql/data # New volume name forces fresh init
       - ./db.sql:/docker-entrypoint-initdb.d/db.sql
 
 volumes:
-  pgdata:
+  pgdata_fresh: # New volume definition
