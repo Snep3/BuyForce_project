@@ -29,7 +29,8 @@ export default function AdminProductsPage() {
       setLoading(true);
       setError("");
       const token = getToken();
-      const res = await axios.get(`${API_URL}/api/admin/products`, {
+      // תיקון: הוסר /admin
+      const res = await axios.get(`${API_URL}/api/products`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProducts(res.data || []);
@@ -45,31 +46,21 @@ export default function AdminProductsPage() {
     setError("");
     try {
       const token = getToken();
-      
-      // יצירת אובייקט בסיסי עם שדות החובה
       const payload = {
         name,
         price: Number(price),
         category,
       };
 
-      // הוספת stock רק אם הוא לא ריק, אחרת השרת ישתמש בברירת מחדל
-      if (stock !== "") {
-        payload.stock = Number(stock);
-      }
+      if (stock !== "") payload.stock = Number(stock);
+      if (description && description.trim() !== "") payload.description = description;
 
-      // שינוי קריטי: שליחת תיאור רק אם הוא לא ריק. 
-      // אם הוא ריק, אנחנו לא שולחים את השדה בכלל כדי למנוע את שגיאת "should not be empty"
-      if (description && description.trim() !== "") {
-        payload.description = description;
-      }
-
-      const res = await axios.post(`${API_URL}/api/admin/products`, payload, {
+      // תיקון: הוסר /admin
+      const res = await axios.post(`${API_URL}/api/products`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       setProducts((prev) => [res.data, ...prev]);
-      // איפוס שדות הטופס
       setName(""); setPrice(""); setCategory(""); setStock(""); setDescription("");
     } catch (err) {
       setError(err?.response?.data?.message || "Create failed");
@@ -81,9 +72,7 @@ export default function AdminProductsPage() {
     const newName = prompt("name", product.name ?? "");
     if (newName === null) return;
     const newPrice = prompt("price", String(product.price ?? ""));
-    if (newPrice === null) return;
     const newCategory = prompt("category", typeof product.category === 'object' ? product.category.name : product.category);
-    if (newCategory === null) return;
     const newStock = prompt("stock", String(product.stock ?? 0));
     const newDescription = prompt("description", product.description ?? "");
 
@@ -95,16 +84,11 @@ export default function AdminProductsPage() {
         category: newCategory,
       };
 
-      if (newStock !== "" && newStock !== null) {
-        payload.stock = Number(newStock);
-      }
+      if (newStock !== "" && newStock !== null) payload.stock = Number(newStock);
+      if (newDescription && newDescription.trim() !== "") payload.description = newDescription;
 
-      // אותו היגיון בעריכה: אם התיאור החדש ריק, לא שולחים אותו כדי לא להכשיל וולידציה
-      if (newDescription && newDescription.trim() !== "") {
-        payload.description = newDescription;
-      }
-
-      const res = await axios.put(`${API_URL}/api/admin/products/${id}`, payload, {
+      // תיקון: הוסר /admin
+      const res = await axios.put(`${API_URL}/api/products/${id}`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -120,7 +104,8 @@ export default function AdminProductsPage() {
     if (!confirm("Are you sure?")) return;
     try {
       const token = getToken();
-      await axios.delete(`${API_URL}/api/admin/products/${id}`, {
+      // תיקון: הוסר /admin
+      await axios.delete(`${API_URL}/api/products/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProducts((prev) => prev.filter((p) => (p.id || p._id) !== id));
@@ -137,20 +122,19 @@ export default function AdminProductsPage() {
         <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
           <Link href="/">🏠 Home</Link>
           <Link href="/admin/groups">👥 Admin Groups</Link>
-          <Link href="/products">🛒 Public Products</Link>
         </div>
 
-        {error && <p style={{ color: "crimson" }}>{error}</p>}
+        {error && <p style={{ color: "crimson", background: "#fee", padding: "8px" }}>{error}</p>}
 
         <section style={{ border: "1px solid #ddd", padding: "1rem", borderRadius: 8, marginBottom: "1.5rem" }}>
           <h2>Create Product</h2>
           <form onSubmit={handleCreate} style={{ display: "grid", gap: "0.75rem", maxWidth: 420 }}>
             <input placeholder="name" value={name} onChange={(e) => setName(e.target.value)} required />
             <input placeholder="price" value={price} onChange={(e) => setPrice(e.target.value)} required />
-            <input placeholder="category (ID or Name)" value={category} onChange={(e) => setCategory(e.target.value)} required />
-            <input placeholder="stock (optional)" value={stock} onChange={(e) => setStock(e.target.value)} />
-            <input placeholder="description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
-            <button type="submit">Create</button>
+            <input placeholder="category" value={category} onChange={(e) => setCategory(e.target.value)} required />
+            <input placeholder="stock" value={stock} onChange={(e) => setStock(e.target.value)} />
+            <input placeholder="description" value={description} onChange={(e) => setDescription(e.target.value)} />
+            <button type="submit" style={{ cursor: "pointer", background: "#007bff", color: "white", border: "none", padding: "10px", borderRadius: "4px" }}>Create</button>
           </form>
         </section>
 
@@ -159,26 +143,26 @@ export default function AdminProductsPage() {
           {loading ? <p>Loading...</p> : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.5rem" }}>Name</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.5rem" }}>Price</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.5rem" }}>Category</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.5rem" }}>Stock</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.5rem" }}>Actions</th>
+                <tr style={{ background: "#f4f4f4" }}>
+                  <th style={{ textAlign: "left", padding: "0.5rem", border: "1px solid #ddd" }}>Name</th>
+                  <th style={{ textAlign: "left", padding: "0.5rem", border: "1px solid #ddd" }}>Price</th>
+                  <th style={{ textAlign: "left", padding: "0.5rem", border: "1px solid #ddd" }}>Category</th>
+                  <th style={{ textAlign: "left", padding: "0.5rem", border: "1px solid #ddd" }}>Stock</th>
+                  <th style={{ textAlign: "left", padding: "0.5rem", border: "1px solid #ddd" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {products.map((p) => (
                   <tr key={p.id || p._id}>
-                    <td style={{ borderBottom: "1px solid #eee", padding: "0.5rem" }}>{p.name}</td>
-                    <td style={{ borderBottom: "1px solid #eee", padding: "0.5rem" }}>{p.price}</td>
-                    <td style={{ borderBottom: "1px solid #eee", padding: "0.5rem" }}>
+                    <td style={{ padding: "0.5rem", border: "1px solid #ddd" }}>{p.name}</td>
+                    <td style={{ padding: "0.5rem", border: "1px solid #ddd" }}>{p.price}</td>
+                    <td style={{ padding: "0.5rem", border: "1px solid #ddd" }}>
                       {typeof p.category === 'object' ? p.category?.name : (p.category || 'General')}
                     </td>
-                    <td style={{ borderBottom: "1px solid #eee", padding: "0.5rem" }}>{p.stock ?? 0}</td>
-                    <td style={{ borderBottom: "1px solid #eee", padding: "0.5rem" }}>
+                    <td style={{ padding: "0.5rem", border: "1px solid #ddd" }}>{p.stock ?? 0}</td>
+                    <td style={{ padding: "0.5rem", border: "1px solid #ddd" }}>
                       <button onClick={() => handleEdit(p)}>Edit</button>
-                      <button onClick={() => handleDelete(p.id || p._id)}>Delete</button>
+                      <button onClick={() => handleDelete(p.id || p._id)} style={{ marginLeft: "5px" }}>Delete</button>
                     </td>
                   </tr>
                 ))}

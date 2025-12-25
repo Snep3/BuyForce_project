@@ -33,18 +33,23 @@ export default function AdminGroupsPage() {
       setError("");
       const token = getToken();
       const headers = { Authorization: `Bearer ${token}` };
+      
+      // שליפה מהנתיבים הנכונים (Prefix אחד של api)
       const [groupsRes, productsRes] = await Promise.all([
-        axios.get(`${API_URL}/api/admin/groups`, { headers }),
-        axios.get(`${API_URL}/api/admin/products`, { headers })
+        axios.get(`${API_URL}/api/groups`, { headers }),
+        axios.get(`${API_URL}/api/products`, { headers }) 
       ]);
+      
       setGroups(groupsRes.data || []);
       setAvailableProducts(productsRes.data || []);
     } catch (err) {
-      setError("Failed to load data");
+      console.error("Fetch error details:", err.response || err);
+      setError(`Failed to load data: ${err.response?.status === 404 ? "Route not found (404)" : "Server error"}`);
     } finally {
       setLoading(false);
     }
   }
+    
 
   const handleProductToggle = (id) => {
     setSelectedProductIds(prev => 
@@ -55,6 +60,7 @@ export default function AdminGroupsPage() {
   async function handleCreate(e) {
     e.preventDefault();
     setError("");
+    
     if (selectedProductIds.length === 0) {
       setError("Please select at least one product");
       return;
@@ -65,22 +71,25 @@ export default function AdminGroupsPage() {
       const token = getToken();
       const headers = { Authorization: `Bearer ${token}` };
       
-      const finalStatus = isActive ? "OPEN" : "LOCKED";
       const metaData = { allProductIds: selectedProductIds };
-      const finalDescription = `${description} | Data: ${JSON.stringify(metaData)}`;
+      const finalDescription = description 
+        ? `${description} | Data: ${JSON.stringify(metaData)}`
+        : `Data: ${JSON.stringify(metaData)}`;
 
       const payload = {
-        name,
+        name: name,
         description: finalDescription,
         target_members: Number(targetMembers),
-        status: finalStatus,
-        active_group: isActive,
+        status: "OPEN", 
+        activeGroup: isActive,
+        active_group: isActive, 
         productId: selectedProductIds[0],
-        deadline: deadline ? new Date(deadline).toISOString() : null,
-        joined_count: 0 
+        joined_count: 0,
+        ...(deadline && { deadline: new Date(deadline).toISOString() })
       };
 
-      await axios.post(`${API_URL}/api/admin/groups`, payload, { headers });
+      // שליחת ה-POST לנתיב המתוקן ללא /admin
+      await axios.post(`${API_URL}/api/groups`, payload, { headers });
       
       fetchData();
       setName("");
@@ -90,7 +99,9 @@ export default function AdminGroupsPage() {
       setProductSearch("");
       setIsActive(true); 
     } catch (err) {
-      setError("Failed to create group.");
+      console.error("Create error:", err.response?.data || err.message);
+      const serverMsg = err.response?.data?.message;
+      setError(Array.isArray(serverMsg) ? serverMsg.join(", ") : "Failed to create group.");
     } finally {
       setIsSubmitting(false);
     }
@@ -114,15 +125,14 @@ export default function AdminGroupsPage() {
 
   const getStatusBadge = (group) => {
     const status = group.status;
-    if (status === "COMPLETED") return <span style={badgeStyle("#155724", "#d4edda")}>COMPLETED</span>;
-    if (status === "FAILED") return <span style={badgeStyle("#721c24", "#f8d7da")}>FAILED</span>;
-    if (status === "LOCKED") return <span style={badgeStyle("#383d41", "#e2e3e5")}>LOCKED</span>;
-    return <span style={badgeStyle("#004085", "#cce5ff")}>ACTIVE</span>;
+    const style = (color, bg) => ({
+      color, backgroundColor: bg, padding: "4px 10px", borderRadius: "12px", fontSize: "0.7rem", fontWeight: "bold"
+    });
+    if (status === "COMPLETED") return <span style={style("#155724", "#d4edda")}>COMPLETED</span>;
+    if (status === "FAILED") return <span style={style("#721c24", "#f8d7da")}>FAILED</span>;
+    if (status === "LOCKED") return <span style={style("#383d41", "#e2e3e5")}>LOCKED</span>;
+    return <span style={style("#004085", "#cce5ff")}>OPEN</span>;
   };
-
-  const badgeStyle = (color, bg) => ({
-    color, backgroundColor: bg, padding: "4px 10px", borderRadius: "12px", fontSize: "0.7rem", fontWeight: "bold"
-  });
 
   return (
     <>
@@ -130,7 +140,7 @@ export default function AdminGroupsPage() {
       <main style={{ padding: "2rem", fontFamily: "sans-serif", direction: "ltr", textAlign: "left", maxWidth: "1200px", margin: "0 auto" }}>
         <h1>Admin / Group Management</h1>
         
-        {error && <div style={{ color: "red", marginBottom: "1rem" }}>{error}</div>}
+        {error && <div style={{ color: "red", backgroundColor: "#ffebeb", padding: "10px", borderRadius: "5px", marginBottom: "1rem" }}>{error}</div>}
 
         <section style={{ border: "1px solid #ddd", padding: "1.5rem", borderRadius: 12, marginBottom: "2rem", backgroundColor: "#fff" }}>
           <h2>Create Group</h2>
@@ -187,7 +197,21 @@ export default function AdminGroupsPage() {
                 <tr key={g.id} style={{ borderBottom: "1px solid #eee" }}>
                   <td style={{ padding: "12px", fontWeight: "bold" }}>{g.name}</td>
                   <td style={{ padding: "12px", fontSize: "0.8rem" }}>{getProductNames(g)}</td>
-                  <td style={{ padding: "12px" }}>{g.joined_count ?? 0} / {g.target_members ?? 0}</td>
+<td style={{ padding: "12px" }}>
+  <div style={{ fontSize: "0.85rem", marginBottom: "4px" }}>
+    {g.joined_count ?? 0} / {g.target_members ?? 0} 
+    <b style={{ marginLeft: "8px", color: "#007bff" }}>({g.progress_pct ?? 0}%)</b>
+  </div>
+  {/* פס התקדמות קטן בתוך הטבלה */}
+  <div style={{ width: "100px", height: "6px", backgroundColor: "#eee", borderRadius: "3px", overflow: "hidden" }}>
+    <div style={{ 
+      width: `${g.progress_pct ?? 0}%`, 
+      height: "100%", 
+      backgroundColor: g.progress_pct >= 100 ? "#28a745" : "#007bff",
+      transition: "width 0.3s ease" 
+    }} />
+  </div>
+</td>
                   <td style={{ padding: "12px", fontSize: "0.8rem" }}>
                     {g.deadline ? new Date(g.deadline).toLocaleString() : "No Deadline"}
                   </td>

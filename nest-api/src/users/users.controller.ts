@@ -2,10 +2,23 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { GroupsService } from '../groups/groups.service'; // ייבוא של GroupsService 
 
-@Controller('api/users')
+@Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService,
+    private readonly groupsService: GroupsService,
+  ) {}
+
+  // בתוך users.controller.ts
+
+@UseGuards(JwtAuthGuard)
+@Get('groups') // זה יהפוך ל- /api/user/groups
+async getGroups(@Req() req) {
+  const userId = req.user?.id || req.user?.userId;
+  // אנחנו פשוט קוראים לפונקציה שכבר כתבת ב-GroupsService!
+  return this.groupsService.findUserGroups(userId); 
+}
 
   @Post('signup')
   async signup(

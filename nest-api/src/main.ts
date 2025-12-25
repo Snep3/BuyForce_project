@@ -1,11 +1,13 @@
 // src/main.ts
-
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // הוספת הקידומת הגלובלית - קריטי כדי שהנתיבים ב-Frontend יעבדו
+  app.setGlobalPrefix('api');
 
   // לאפשר קריאות מה-Next (localhost:3000)
   app.enableCors({

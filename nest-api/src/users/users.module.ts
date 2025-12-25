@@ -4,11 +4,13 @@ import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { User } from './user.entity'; // מוודא ייבוא של ה-Entity ולא ה-Schema
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { GroupsModule } from '../groups/groups.module'; // ייבוא של GroupsModule
 
 @Module({
   imports: [
     // החלפת MongooseModule ב-TypeOrmModule עבור ישות המשתמש
     TypeOrmModule.forFeature([User]),
+    GroupsModule,
   ],
   providers: [
     UsersService, 

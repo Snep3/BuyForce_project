@@ -1,12 +1,12 @@
 // src/groups/dto/create-group.dto.ts
-import { IsString, IsNotEmpty, IsOptional, IsInt, Min, IsBoolean, IsEnum, IsUUID, IsNumber } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsInt, Min, IsBoolean, IsEnum, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 import { IsDateString } from 'class-validator';
 
-// הגדרת הסטטוסים המותרים כדי למנוע כפילויות ושגיאות כתיב
+// הגדרת הסטטוסים המותרים - תיקון שגיאת הכתיב
 export enum GroupStatus {
   OPEN = 'OPEN',
-  LOCKED = 'LOCKED',
+  COMPLETED = 'COMPLETED', // תוקן מ-COPMLETED
   FAILED = 'FAILED',
 }
 
@@ -19,43 +19,40 @@ export class CreateGroupDto {
   @IsOptional()
   description?: string;
 
-  // במקום minParticipants - השתמשנו ב-targetMembers כפי שהגדרנו ב-Entity
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @IsOptional()
   targetMembers?: number;
 
-  // במקום isActive - השתמשנו ב-activeGroup כפי שביקשת
+  @IsNumber()
+  @IsNotEmpty()
+  target_members: number; 
+
   @Type(() => Boolean)
   @IsBoolean()
   @IsOptional()
   activeGroup?: boolean;
 
-  // הוספת הסטטוס המבוקר (סעיף 3)
+  // הוספת השדה בפורמט שנשלח מה-Frontend כדי למנוע שגיאת 400
+  @IsBoolean()
+  @IsOptional()
+  active_group?: boolean; 
+
   @IsEnum(GroupStatus)
   @IsOptional()
   status?: GroupStatus;
 
-  // מזהה המוצר אליו משויכת הקבוצה
-  @IsUUID()
+  // שינוי מ-IsUUID ל-IsString כדי להיות גמישים יותר עם מזהי המוצרים
+  @IsString()
   @IsNotEmpty()
   productId: string;
 
   @IsOptional()
-@IsNumber()
-joined_count: number;
-
-
   @IsNumber()
-  @IsNotEmpty()
-  target_members: number; // חובה לקבוע יעד כשיוצרים קבוצה
+  joined_count: number;
 
-@IsDateString() // וולידציה שהתאריך נשלח בפורמט תקין (ISO)
-@IsOptional()
-deadline?: Date;
-
-
-
+  @IsDateString() 
+  @IsOptional()
+  deadline?: Date;
 }
-

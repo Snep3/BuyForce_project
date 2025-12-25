@@ -11,6 +11,8 @@ export default function ProductDetailPage({ initialProduct }) {
   const [comment, setComment] = useState("");
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+  const [group, setGroup] = useState(null); // הוספת State לקבוצה
+  const [processingGroup, setProcessingGroup] = useState(false);
 
   useEffect(() => {
     setProduct(initialProduct);

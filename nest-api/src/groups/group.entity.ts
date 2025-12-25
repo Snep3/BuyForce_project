@@ -16,7 +16,6 @@ import { Product } from '../products/product.entity'; // תיקון נתיב ה�
 // 1. הגדרת רשימת הסטטוסים האפשריים
 export enum GroupStatus {
   OPEN = 'OPEN',
-  LOCKED = 'LOCKED',
   FAILED = 'FAILED',
   COMPLETED = 'COMPLETED'
 }
@@ -34,8 +33,6 @@ export class Group {
   // השדות שביקשת להוסיף עבור ה-Seed:
   @Column({ name: 'status', type: 'character varying', length: 20, default: 'OPEN' })
   status: string;
-
-
 
   @Column({ name: 'active_group', type: 'boolean', default: true })
   activeGroup: boolean;
