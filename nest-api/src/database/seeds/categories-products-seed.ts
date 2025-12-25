@@ -215,7 +215,7 @@ console.log('👥 יוצר משתמשים...');
             productId: flagshipPhone.id, 
             name: 'קבוצת טלפון דגל X90', 
             description: 'הזדמנות אחרונה לטלפון החדש',
-            status: 'LOCKED', 
+            status: 'COMPLETED', 
             joined_count: flagshipPhone.minMembers, 
             target_members: flagshipPhone.minMembers, 
             maxMembers: flagshipPhone.maxMembers, 
@@ -242,7 +242,7 @@ deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
     console.log('💵 יוצר טרנזקציות...');
     const transactionsData = [
         { userId: userSeva1.id, groupId: groupMap['OPEN'].id, amount: ancHeadphones.priceGroup, currency: 'ILS', type: TransactionType.CHARGE, status: TransactionStatus.SUCCESS, provider: 'Tranzilla', providerRef: 'TRZ-' + uuidv4().substring(0, 10), idempotencyKey: uuidv4() },
-        { userId: userPre1.id, groupId: groupMap['LOCKED'].id, amount: flagshipPhone.priceGroup, currency: 'ILS', type: TransactionType.CHARGE, status: TransactionStatus.SUCCESS, provider: 'Tranzilla', providerRef: 'TRZ-' + uuidv4().substring(0, 10), idempotencyKey: uuidv4() },
+        { userId: userPre1.id, groupId: groupMap['COMPLETED'].id, amount: flagshipPhone.priceGroup, currency: 'ILS', type: TransactionType.CHARGE, status: TransactionStatus.SUCCESS, provider: 'Tranzilla', providerRef: 'TRZ-' + uuidv4().substring(0, 10), idempotencyKey: uuidv4() },
         { userId: userPre1.id, groupId: groupMap['FAILED'].id, amount: gamingLaptop.priceGroup, currency: 'ILS', type: TransactionType.REFUND, status: TransactionStatus.SUCCESS, provider: 'Tranzilla', providerRef: 'TRZ-' + uuidv4().substring(0, 10), idempotencyKey: uuidv4() },
     ];
     const savedTransactions = await transactionRepository.save(transactionRepository.create(transactionsData) as any);
@@ -258,7 +258,7 @@ deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
             transactionId: savedTransactions[0].id // טרנזקציה ראשונה
         },
         { 
-            groupId: groupMap['LOCKED'].id, 
+            groupId: groupMap['COMPLETED'].id, 
             userId: userPre1.id, 
             status: 'PAID', 
             amountGroupPrice: flagshipPhone.priceGroup, 
@@ -281,7 +281,7 @@ deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
 
     console.log('🔔 יוצר התראות...');
     await notificationRepository.save(notificationRepository.create([
-        { userId: userPower.id, type: 'GROUP_REACHED_TARGET', title: 'קבוצת הטלפון הושלמה!', body: 'קבוצת רכישה לטלפון הדגל הגיעה ליעד.', channel: 'push', status: 'SENT', sentAt: new Date(), payload: { groupId: groupMap['LOCKED'].id } }
+        { userId: userPower.id, type: 'GROUP_REACHED_TARGET', title: 'קבוצת הטלפון הושלמה!', body: 'קבוצת רכישה לטלפון הדגל הגיעה ליעד.', channel: 'push', status: 'SENT', sentAt: new Date(), payload: { groupId: groupMap['COMPLETED'].id } }
     ] as any));
 
     console.log('📸 יוצר תמונות...');
