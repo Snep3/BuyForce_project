@@ -44,5 +44,10 @@
       "typedRoutes": true,
       "reactCompiler": true
     }
+  ,
+  "extra": {
+      "stripePublishableKey": "pk_test_51Sh4jwKDL2M962HXKPcMH5eTEp1KUmPhCDzuRIe6DyLcla9C0LHKB5LCFjNXbGQxNgkM8ipG3a5uJ79IWhZKY8Xv00cRvnFqs5",
+      "apiUrl": "http://10.0.2.2:4000"
+  }
   }
 }

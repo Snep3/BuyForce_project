@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, SafeAreaView, Switch, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import Constants from 'expo-constants';
+import { useStripe, CardField } from '@stripe/stripe-react-native';
 import { useRouter } from 'expo-router';
 
 
@@ -41,6 +44,17 @@ export default function ProfileScreen() {
   
   // הגדרות מקומיות (Mock) - [cite: 475]
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  // Payment methods (mocked) state
+  const [paymentExpanded, setPaymentExpanded] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<Array<{ id: string; brand: string; last4: string }>>([
+    { id: 'pm_1', brand: 'Visa', last4: '4242' }
+  ]);
+  const [defaultPaymentId, setDefaultPaymentId] = useState<string | null>(paymentMethods[0]?.id ?? null);
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const { confirmSetupIntent } = useStripe();
+  const BACKEND_URL = Constants.expoConfig?.extra?.apiUrl ?? 'http://10.0.2.2:4000';
+  const [addingCard, setAddingCard] = useState(false);
+  const [cardComplete, setCardComplete] = useState(false);
 
   const handleLogout = () => {
     Alert.alert(
@@ -59,6 +73,90 @@ export default function ProfileScreen() {
         }
       ]
     );
+  };
+
+  const startAddCard = () => {
+    setAddingCard(true);
+  };
+
+  const handleSaveCard = async () => {
+    if (!cardComplete) {
+      Alert.alert('Invalid card', 'Please enter complete card details.');
+      return;
+    }
+
+    try {
+      const resp = await axios.post(`${BACKEND_URL}/payments/setup-intent`);
+      const clientSecret = resp.data?.clientSecret || resp.data?.client_secret;
+      if (!clientSecret) {
+        Alert.alert('Error', 'No client secret from server');
+        return;
+      }
+
+      const { setupIntent, error } = await confirmSetupIntent(clientSecret, { paymentMethodType: 'Card' } as any);
+      if (error) {
+        Alert.alert('Error', error.message);
+        return;
+      }
+
+      const paymentMethodId = setupIntent?.payment_method;
+      if (!paymentMethodId) {
+        Alert.alert('Error', 'No payment method id returned');
+        return;
+      }
+
+      const saveResp = await axios.post(`${BACKEND_URL}/payments/save-payment-method`, { paymentMethodId, customerId });
+      const saved = saveResp.data;
+      setCustomerId(saved.customerId ?? customerId);
+      setPaymentMethods(prev => [{ id: saved.id, brand: saved.brand, last4: saved.last4 }, ...prev]);
+      setDefaultPaymentId(saved.id);
+      setAddingCard(false);
+      Alert.alert('Saved', 'Card saved for future payments.');
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'Unable to save card.');
+    }
+  };
+
+  const fetchPaymentMethods = async () => {
+    try {
+      const resp = await axios.post(`${BACKEND_URL}/payments/list`, { customerId });
+      const data = resp.data;
+      if (Array.isArray(data)) {
+        setPaymentMethods(data);
+        if (data.length) setDefaultPaymentId(data[0].id);
+      } else if (data.data) {
+        setPaymentMethods(data.data);
+        if (data.data.length) setDefaultPaymentId(data.data[0].id);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPaymentMethods();
+  }, []);
+
+  const confirmRemoveCard = (id: string) => {
+    Alert.alert(
+      'Remove Card',
+      'Are you sure you want to remove this card?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: () => removeCard(id) }
+      ]
+    );
+  };
+
+  const removeCard = (id: string) => {
+    setPaymentMethods(prev => prev.filter(p => p.id !== id));
+    if (defaultPaymentId === id) setDefaultPaymentId(prev => (paymentMethods[0] ? paymentMethods[0].id : null));
+  };
+
+  const makeDefault = (id: string) => {
+    setDefaultPaymentId(id);
+    Alert.alert('Default set', 'This card is now your default payment method.');
   };
 
   return (
@@ -84,13 +182,66 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
           
-          {/* Payment Methods [cite: 464] */}
-          <MenuRow 
-            icon="card-outline" 
-            label="Payment Methods" 
-            value="Visa •••• 4242"
-            onPress={() => console.log("Nav to Payments")} 
-          />
+          {/* Payment Methods [Stripe section] */}
+          <TouchableOpacity style={styles.menuRow} onPress={() => setPaymentExpanded(p => !p)} activeOpacity={0.8}>
+            <View style={styles.iconContainer}><Ionicons name="card-outline" size={20} color="#333" /></View>
+            <View style={styles.menuContent}>
+              <Text style={styles.menuLabel}>Payment Methods</Text>
+              <Text style={styles.menuValue}>{paymentMethods.length ? `${paymentMethods.find(p => p.id === defaultPaymentId)?.brand} •••• ${paymentMethods.find(p => p.id === defaultPaymentId)?.last4}` : 'No cards'}</Text>
+            </View>
+            <Ionicons name={paymentExpanded ? 'chevron-down' : 'chevron-forward'} size={20} color="#ccc" />
+          </TouchableOpacity>
+
+          {paymentExpanded && (
+            <View style={{ paddingHorizontal: 20, paddingBottom: 12, backgroundColor: '#fff' }}>
+              {paymentMethods.map(pm => (
+                <View key={pm.id} style={styles.cardRow}>
+                  <View style={styles.cardInfo}>
+                    <Text style={styles.cardBrand}>{pm.brand}</Text>
+                    <Text style={styles.cardLast4}>•••• {pm.last4}</Text>
+                    {defaultPaymentId === pm.id && <Text style={{ color: '#2f95dc', fontSize: 12, marginTop: 4 }}>Default</Text>}
+                  </View>
+                  <View style={styles.cardActions}>
+                    {defaultPaymentId !== pm.id && (
+                      <TouchableOpacity onPress={() => makeDefault(pm.id)} style={styles.actionButton}>
+                        <Text style={{ color: '#2f95dc' }}>Set Default</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity onPress={() => confirmRemoveCard(pm.id)} style={styles.actionButton}>
+                      <Text style={{ color: '#ef4444' }}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+
+              {!addingCard && (
+                <TouchableOpacity style={styles.addButton} onPress={startAddCard} activeOpacity={0.8}>
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>Add Payment Method</Text>
+                </TouchableOpacity>
+              )}
+
+              {addingCard && (
+                <View style={{ marginTop: 12 }}>
+                  <CardField
+                    postalCodeEnabled={false}
+                    placeholder={{ number: '4242 4242 4242 4242' }}
+                    cardStyle={{ backgroundColor: '#FFFFFF', textColor: '#000000' }}
+                    style={{ height: 50 }}
+                    onCardChange={(card) => setCardComplete(Boolean(card?.complete))}
+                  />
+
+                  <View style={{ flexDirection: 'row', marginTop: 12 }}>
+                    <TouchableOpacity style={[styles.addButton, { flex: 1, marginRight: 8 }]} onPress={handleSaveCard}>
+                      <Text style={{ color: '#fff', fontWeight: '700' }}>Save Card</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.addButton, { flex: 1, backgroundColor: '#6b7280' }]} onPress={() => setAddingCard(false)}>
+                      <Text style={{ color: '#fff', fontWeight: '700' }}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
           
           {/* My Addresses (Future/Standard) */}
           <MenuRow 
@@ -230,6 +381,15 @@ const styles = StyleSheet.create({
   // Destructive Styles
   destructiveText: { color: '#ef4444', fontWeight: '600' },
   destructiveIconBg: { backgroundColor: '#fee2e2' },
+  
+  // Card / Payment styles
+  cardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderColor: '#f3f4f6' },
+  cardInfo: { flex: 1 },
+  cardBrand: { fontSize: 15, fontWeight: '600', color: '#111' },
+  cardLast4: { fontSize: 13, color: '#6b7280', marginTop: 4 },
+  cardActions: { flexDirection: 'row', alignItems: 'center' },
+  actionButton: { paddingHorizontal: 10, paddingVertical: 6 },
+  addButton: { marginTop: 12, backgroundColor: '#111827', paddingVertical: 12, alignItems: 'center', borderRadius: 8 },
 
   versionText: { textAlign: 'center', color: '#ccc', fontSize: 12, marginTop: 20 }
 });
