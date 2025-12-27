@@ -48,3 +48,34 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Stripe & Backend configuration
+
+1. Add your Stripe publishable key and backend URL to `app.json` under `expo.extra`:
+
+```json
+"extra": {
+   "stripePublishableKey": "pk_live_... or pk_test_...",
+   "apiUrl": "http://10.0.2.2:4000"
+}
+```
+
+2. For local Android emulators use `http://10.0.2.2:4000` for the Nest backend; for iOS simulator use `http://localhost:4000`.
+
+3. The app currently uses the PaymentSheet flow and expects the backend endpoint `POST /payments/join-auction` to return a client secret. The backend (nest-api) already contains a sample `PaymentsService` that uses `process.env.STRIPE_SECRET_KEY`.
+
+4. To run backend locally set `STRIPE_SECRET_KEY` in your environment and start the server:
+
+```bash
+cd ../nest-api
+export STRIPE_SECRET_KEY="sk_test_..."
+npm run start:dev
+```
+
+5. Then run the Expo app:
+
+```bash
+cd client-mobile
+npm install
+npx expo start
+```
