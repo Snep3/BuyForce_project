@@ -1,8 +1,6 @@
 import React from "react";
 import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { View, Text } from "react-native";
-
 import { useStore } from "../../store/useStore";
 import CustomHeader from "../../components/CustomHeader";
 
@@ -18,7 +16,6 @@ export default function TabLayout() {
   };
 
   return (
-    
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: "#2f95dc",
@@ -35,20 +32,8 @@ export default function TabLayout() {
           ),
         }}
       />
-          <Tabs.Screen
-        name="groups"
-        options={{
-          title: "My Groups",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="people" size={24} color={color} />
-          ),
-        }}
-        listeners={{
-          tabPress: (e) => guardTabPress(e),
-        }}
-      />
 
-
+      {/* FIXED: "groups" listed only once */}
       <Tabs.Screen
         name="groups"
         options={{

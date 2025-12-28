@@ -1,6 +1,7 @@
 import { Product, GroupDeal } from '../types'; 
 
 // --- נתונים למסך הבית (Home) ---
+  // --- נתונים למסך הבית (Home) ---
 export const MOCK_PRODUCTS: Product[] = [
   {
     id: 'p1',
@@ -12,7 +13,7 @@ export const MOCK_PRODUCTS: Product[] = [
     price_group: 4200,
     discount_pct: 0.23,
     currency: 'ILS',
-    image_url: 'https://placehold.co/600x400/png',
+    image_url: 'https://placehold.co/600x400/png?text=Sony+TV',
     min_members: 50,
     active_group: {
       id: 'g1',
@@ -34,7 +35,7 @@ export const MOCK_PRODUCTS: Product[] = [
     price_group: 2400,
     discount_pct: 0.25,
     currency: 'ILS',
-    image_url: 'https://placehold.co/600x400/png',
+    image_url: 'https://placehold.co/600x400/png?text=Dyson',
     min_members: 100,
     active_group: {
       id: 'g2',
@@ -45,77 +46,93 @@ export const MOCK_PRODUCTS: Product[] = [
       deadline: new Date(Date.now() + 86400000 * 5).toISOString(),
       progress_pct: 0.15,
     }
-  }
-];
-
-// --- נתונים למסך הקבוצות (My Groups) ---
-export const MY_JOINED_GROUP_IDS = ['g1', 'g3', 'g4', 'g5'];
-
-export const MOCK_DEALS: GroupDeal[] = [
+  },
   {
-    id: '101',
-    productId: 'p1', // Linked to Sony TV
-    groupId: 'g1',
-    name: 'Sony WH-1000XM5', // שם שונה לדוגמה, אבל מקשר למוצר p1 שיעבוד
-    categoryId: 1,
-    description: 'Top tier noise canceling headphones',
-    image_url: 'https://placehold.co/400x300/png',
+    id: 'p3',
+    name: 'Ninja Grill XL',
+    slug: 'ninja-grill',
+    category_id: 3,
+    description: 'Indoor grill and air fryer.',
     price_regular: 1400,
-    price_group: 990,
-    min_members: 40,
-    target_members: 50,
-    joinedCount: 45,
-    groupStatus: 'OPEN',
-    deadline: new Date(Date.now() + 1000 * 60 * 60 * 48).toISOString(),
+    price_group: 950,
+    discount_pct: 0.32,
+    currency: 'ILS',
+    image_url: 'https://placehold.co/600x400/png?text=Ninja',
+    min_members: 200,
+    active_group: {
+      id: 'g3',
+      product_id: 'p3',
+      status: 'OPEN',
+      joined_count: 180,
+      target_members: 200,
+      deadline: new Date(Date.now() + 86400000 * 1).toISOString(),
+      progress_pct: 0.90,
+    }
   },
   {
-    id: '103',
-    productId: 'p2', // Linked to Dyson (לצורך הדוגמה שיעבוד בניווט)
-    groupId: 'g3',
-    name: 'Ninja Grill AG301',
-    categoryId: 3,
-    description: 'The grill that sears, sizzles, and air fry crisps',
-    image_url: 'https://placehold.co/400x300/png',
+    id: 'p4',
+    name: 'Apple AirPods Pro 2',
+    slug: 'airpods-pro-2',
+    category_id: 1,
+    description: 'Active noise cancellation.',
     price_regular: 1100,
-    price_group: 850,
-    min_members: 30,
-    target_members: 40,
-    joinedCount: 40, 
-    groupStatus: 'REACHED_TARGET',
-    deadline: new Date(Date.now() + 1000 * 60 * 60 * 5).toISOString(),
-  },
-  {
-    id: '104',
-    productId: 'p1', // Linked to Sony TV (dummy)
-    groupId: 'g4',
-    name: 'Nespresso Vertuo Next',
-    categoryId: 3,
-    description: 'Compact coffee machine',
-    image_url: 'https://placehold.co/400x300/png',
-    price_regular: 800,
-    price_group: 550,
-    min_members: 20,
-    target_members: 20,
-    joinedCount: 20,
-    groupStatus: 'CHARGED',
-    deadline: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-  },
-  {
-    id: '105',
-    productId: 'p2', // Linked to Dyson (dummy)
-    groupId: 'g5',
-    name: 'Electric Scooter Xiaomi 4',
-    categoryId: 5,
-    description: 'Go further',
-    image_url: 'https://placehold.co/400x300/png',
-    price_regular: 2500,
-    price_group: 1900,
+    price_group: 890,
+    discount_pct: 0.19,
+    currency: 'ILS',
+    image_url: 'https://placehold.co/600x400/png?text=AirPods',
     min_members: 50,
-    target_members: 50,
-    joinedCount: 15,
-    groupStatus: 'FAILED',
-    deadline: new Date(Date.now() - 1000 * 60 * 60 * 10).toISOString(),
+    active_group: {
+      id: 'g4',
+      product_id: 'p4',
+      status: 'OPEN',
+      joined_count: 10,
+      target_members: 50,
+      deadline: new Date(Date.now() + 86400000 * 4).toISOString(),
+      progress_pct: 0.20,
+    }
+  },
+  {
+    id: 'p5',
+    name: 'Nespresso Vertuo',
+    slug: 'nespresso-vertuo',
+    category_id: 3,
+    description: 'Coffee machine with capsules.',
+    price_regular: 800,
+    price_group: 499,
+    discount_pct: 0.37,
+    currency: 'ILS',
+    image_url: 'https://placehold.co/600x400/png?text=Nespresso',
+    min_members: 30,
+    active_group: {
+      id: 'g5',
+      product_id: 'p5',
+      status: 'OPEN',
+      joined_count: 5,
+      target_members: 30,
+      deadline: new Date(Date.now() + 86400000 * 7).toISOString(),
+      progress_pct: 0.16,
+    }
+  },
+  {
+    id: 'p6',
+    name: 'Xiaomi Scooter 4',
+    slug: 'xiaomi-scooter',
+    category_id: 5,
+    description: 'Electric scooter 35km range.',
+    price_regular: 2200,
+    price_group: 1750,
+    discount_pct: 0.20,
+    currency: 'ILS',
+    image_url: 'https://placehold.co/600x400/png?text=Scooter',
+    min_members: 20,
+    active_group: {
+      id: 'g6',
+      product_id: 'p6',
+      status: 'OPEN',
+      joined_count: 19,
+      target_members: 20,
+      deadline: new Date(Date.now() + 86400000 * 0.5).toISOString(),
+      progress_pct: 0.95,
+    }
   }
 ];
-
-export default MOCK_PRODUCTS;
