@@ -1,24 +1,27 @@
-// src/products/comment.entity.ts
+// nest-api/src/products/comment.entity.ts
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
-  ManyToOne,
   CreateDateColumn,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Product } from './product.entity';
+import { User } from '../users/user.entity';
 
 @Entity('comments')
 export class Comment {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column({ type: 'text' })
   content: string;
 
-  // כרגע רק מזהה משתמש (מ-Mongo), בעתיד נחבר ל-Users ב-SQL
-  @Column({ nullable: true })
-  userId?: string;
+  @ManyToOne(() => User, (user) => user.comments, {
+    onDelete: 'CASCADE',
+  })
+  user: User;
 
   @ManyToOne(() => Product, (product) => product.comments, {
     onDelete: 'CASCADE',
@@ -27,4 +30,7 @@ export class Comment {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

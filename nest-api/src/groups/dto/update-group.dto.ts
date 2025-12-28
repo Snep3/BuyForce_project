@@ -1,24 +1,27 @@
 // src/groups/dto/update-group.dto.ts
-import { IsString, IsOptional, IsInt, Min, IsBoolean } from 'class-validator';
-import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class UpdateGroupDto {
-  @IsString()
   @IsOptional()
+  @IsString()
   name?: string;
 
-  @IsString()
   @IsOptional()
-  description?: string;
+  @IsString()
+  productId?: string;
 
-  @Type(() => Number)
+  @IsOptional()
   @IsInt()
   @Min(1)
-  @IsOptional()
   minParticipants?: number;
 
-  @Type(() => Boolean)
-  @IsBoolean()
   @IsOptional()
+  @IsBoolean()
   isActive?: boolean;
 }

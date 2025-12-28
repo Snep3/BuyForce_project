@@ -9,10 +9,10 @@ services:
       POSTGRES_PASSWORD: 123456
       POSTGRES_DB: BuyForce_sql
     ports:
-      - "5438:5432"  # Using port 5438 to guarantee no conflicts
+      - "5438:5432"  # פורט חיצוני 5438 כדי למנוע התנגשות
     volumes:
-      - pgdata_fresh:/var/lib/postgresql/data # New volume name forces fresh init
+      - pgdata_fresh:/var/lib/postgresql/data  # volume חדש
       - ./db.sql:/docker-entrypoint-initdb.d/db.sql
 
 volumes:
-  pgdata_fresh: # New volume definition
+  pgdata_fresh:

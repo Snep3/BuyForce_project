@@ -29,7 +29,7 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @OneToMany(() => Comment, (comment) => comment.product, { cascade: true })
+   @OneToMany(() => Comment, (comment) => comment.product)
   comments: Comment[];
 
   @CreateDateColumn()

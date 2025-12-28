@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+// ייצוג של קבוצת רכישה
 @Entity('groups')
 export class Group {
   @PrimaryGeneratedColumn('uuid')
@@ -27,6 +28,11 @@ export class Group {
   // האם הקבוצה פעילה
   @Column({ default: true })
   isActive: boolean;
+
+  // מזהה המוצר שהקבוצה שייכת אליו
+  @Column({ type: 'varchar', nullable: true })
+productId: string;
+
 
   @CreateDateColumn()
   createdAt: Date;

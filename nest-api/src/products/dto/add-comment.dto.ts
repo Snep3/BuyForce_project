@@ -1,5 +1,5 @@
-// src/products/dto/add-comment.dto.ts
-import { IsString, IsNotEmpty } from 'class-validator';
+// nest-api/src/products/dto/add-comment.dto.ts
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class AddCommentDto {
   @IsString()

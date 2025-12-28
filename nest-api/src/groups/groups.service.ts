@@ -3,51 +3,71 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Group } from './group.entity';
+import { GroupMember } from './group-member.entity';
+import { CreateGroupDto } from './dto/create-group.dto';
+import { UpdateGroupDto } from './dto/update-group.dto';
 
 @Injectable()
 export class GroupsService {
   constructor(
     @InjectRepository(Group)
     private readonly groupRepo: Repository<Group>,
+    @InjectRepository(GroupMember)
+    private readonly groupMemberRepo: Repository<GroupMember>,
   ) {}
 
-  async findAll(): Promise<Group[]> {
-    return this.groupRepo.find();
-  }
-
-  async create(data: {
-    name: string;
-    description?: string;
-    minParticipants?: number;
-    isActive?: boolean;
-  }): Promise<Group> {
+  async create(dto: CreateGroupDto): Promise<Group> {
     const group = this.groupRepo.create({
-      name: data.name,
-      description: data.description,
-      minParticipants: data.minParticipants ?? 1,
-      isActive: data.isActive ?? true,
+      name: dto.name,
+      productId: dto.productId,
+      minParticipants: dto.minParticipants ?? 1,
+      isActive: dto.isActive ?? true,
     });
 
     return this.groupRepo.save(group);
   }
 
-  async update(id: string, patch: Partial<Group>): Promise<Group> {
-    const group = await this.groupRepo.findOne({ where: { id } });
-    if (!group) throw new NotFoundException('Group not found');
+  async findAll(): Promise<Group[]> {
+    return this.groupRepo.find({
+      order: { createdAt: 'DESC' },
+    });
+  }
 
-    if (patch.name !== undefined) group.name = patch.name;
-    if (patch.description !== undefined) group.description = patch.description;
-    if (patch.minParticipants !== undefined) group.minParticipants = patch.minParticipants;
-    if (patch.isActive !== undefined) group.isActive = patch.isActive;
+  async findOne(id: string): Promise<Group> {
+    const group = await this.groupRepo.findOne({ where: { id } });
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+    return group;
+  }
+
+  async update(id: string, dto: UpdateGroupDto): Promise<Group> {
+    const group = await this.findOne(id);
+
+    if (dto.name !== undefined) {
+      group.name = dto.name;
+    }
+    if (dto.productId !== undefined) {
+      group.productId = dto.productId;
+    }
+    if (dto.minParticipants !== undefined) {
+      group.minParticipants = dto.minParticipants;
+    }
+    if (dto.isActive !== undefined) {
+      group.isActive = dto.isActive;
+    }
 
     return this.groupRepo.save(group);
   }
 
-  async remove(id: string): Promise<{ deleted: true }> {
-    const group = await this.groupRepo.findOne({ where: { id } });
-    if (!group) throw new NotFoundException('Group not found');
+  async remove(id: string): Promise<void> {
+    await this.groupRepo.delete(id);
+  }
 
-    await this.groupRepo.remove(group);
-    return { deleted: true };
+  // לשימוש ב-API /orders והצד הציבורי
+  async findByProduct(productId: string): Promise<Group | null> {
+    return this.groupRepo.findOne({
+      where: { productId },
+    });
   }
 }

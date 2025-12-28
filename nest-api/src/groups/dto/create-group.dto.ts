@@ -7,6 +7,11 @@ export class CreateGroupDto {
   @IsNotEmpty()
   name: string;
 
+   // מזהה המוצר של הקבוצה (products.id)
+  @IsString()
+  @IsNotEmpty()
+  productId: string;
+
   @IsString()
   @IsOptional()
   description?: string;

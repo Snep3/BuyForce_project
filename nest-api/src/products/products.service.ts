@@ -2,8 +2,13 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
 import { Product } from './product.entity';
 import { Comment } from './comment.entity';
+import { AddCommentDto } from './dto/add-comment.dto';
+import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
+import { User } from '../users/user.entity';
 
 @Injectable()
 export class ProductsService {
@@ -12,7 +17,9 @@ export class ProductsService {
     private readonly productRepo: Repository<Product>,
     @InjectRepository(Comment)
     private readonly commentRepo: Repository<Comment>,
-  ) {}
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
+  ) { }
 
   async findAll(): Promise<Product[]> {
     return this.productRepo.find();
@@ -51,28 +58,69 @@ export class ProductsService {
     return this.productRepo.save(product);
   }
 
-  async addComment(productId: string, userId: string, content: string): Promise<Product> {
-    if (!content || !content.trim()) {
-      throw new BadRequestException('Comment content required');
-    }
-
-    const product = await this.productRepo.findOne({ where: { id: productId } });
-    if (!product) throw new NotFoundException('Product not found');
-
+  // דוגמה לפונקציה – תחליף את הקיימת אצלך
+  async addComment(
+    productId: string,
+    userId: string,
+    content: string,
+  ): Promise<Comment> {
+    // יוצרים אובייקט Comment עם קשרים לפי ה-Entity
     const comment = this.commentRepo.create({
-      content: content.trim(),
-      userId,
-      product,
+      content,
+      product: { id: productId } as any,
+      user: { id: userId } as any,
     });
 
-    await this.commentRepo.save(comment);
+    return this.commentRepo.save(comment);
+  }
+  // הוספת תגובה למוצר
+  async addCommentToProduct(
+    productId: string,
+    userId: string,
+    dto: AddCommentDto,
+  ): Promise<Comment> {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
 
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
 
-    // מחזירים מוצר מעודכן עם comments
-    return this.findById(productId);
+    const comment = this.commentRepo.create({
+      content: dto.content,
+      product,
+      user,
+    });
+
+    return this.commentRepo.save(comment);
   }
 
-    async updateProduct(
+  // החזרת כל התגובות למוצר
+  async getCommentsForProduct(productId: string): Promise<Comment[]> {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    return this.commentRepo.find({
+      where: { product: { id: productId } },
+      relations: ['user'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+
+
+  async updateProduct(
     id: string,
     patch: {
       name?: string;
