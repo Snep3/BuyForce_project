@@ -1,7 +1,6 @@
 import React from "react";
 import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { View, Text } from "react-native";
 
 import { useStore } from "../../store/useStore";
 import CustomHeader from "../../components/CustomHeader";
@@ -18,7 +17,6 @@ export default function TabLayout() {
   };
 
   return (
-    
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: "#2f95dc",
@@ -35,19 +33,6 @@ export default function TabLayout() {
           ),
         }}
       />
-          <Tabs.Screen
-        name="groups"
-        options={{
-          title: "My Groups",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="people" size={24} color={color} />
-          ),
-        }}
-        listeners={{
-          tabPress: (e) => guardTabPress(e),
-        }}
-      />
-
 
       <Tabs.Screen
         name="groups"
@@ -58,7 +43,7 @@ export default function TabLayout() {
           ),
         }}
         listeners={{
-          tabPress: (e) => guardTabPress(e),
+          tabPress: guardTabPress,
         }}
       />
 
@@ -71,7 +56,7 @@ export default function TabLayout() {
           ),
         }}
         listeners={{
-          tabPress: (e) => guardTabPress(e),
+          tabPress: guardTabPress,
         }}
       />
 
@@ -84,7 +69,7 @@ export default function TabLayout() {
           ),
         }}
         listeners={{
-          tabPress: (e) => guardTabPress(e),
+          tabPress: guardTabPress,
         }}
       />
 
@@ -97,7 +82,7 @@ export default function TabLayout() {
           ),
         }}
         listeners={{
-          tabPress: (e) => guardTabPress(e),
+          tabPress: guardTabPress,
         }}
       />
     </Tabs>

@@ -1,20 +1,32 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react'; // 🔧 FIX: added useEffect
 import { useRouter } from 'expo-router';
+import { useGoogleAuth } from '../../firebase/useGoogleAuth';
 import { useStore } from '../../store/useStore';
 import {
   StyleSheet,
   Text,
+  ScrollView,
   TextInput,
   View,
   Alert,
   Pressable,
 } from 'react-native';
 
+// 🔥 Firebase auth helpers
+import {
+  firebaseLogin,
+  firebaseRegister,
+} from '../../firebase/auth';
+
+// 🔥 Firebase auth instance
+import { auth } from '../../firebase/firebase'; // ✅ ADDED
+import { onAuthStateChanged } from 'firebase/auth'; // ✅ ADDED
+
 /* =========================
    TYPES
    ========================= */
 
-type AgeGroup = '0-18' | '19-26' | '27-40' | '40-50' | '50+';
+type AgeGroup = '18-26' | '27-40' | '40-50' | '50+';
 type TechLevel = 'Beginner' | 'Intermediate' | 'Expert';
 type Occupation =
   | 'Student'
@@ -34,53 +46,77 @@ type Occupation =
    ========================= */
 
 export default function LoginScreen() {
-    
-    const router = useRouter();
-    const login = useStore((state) => state.login);
+  const router = useRouter();
+  const login = useStore((state) => state.login);
+
+  // ✅ Google auth hook
+  const { promptGoogleLogin, request } = useGoogleAuth();
 
   /* =========================
      STATE
      ========================= */
 
-     
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [userName, setUserName] = useState('');
-
   const [showRegister, setShowRegister] = useState(false);
 
-  // Register-only
   const [ageGroup, setAgeGroup] = useState<AgeGroup | null>(null);
   const [techLevel, setTechLevel] = useState<TechLevel | null>(null);
   const [occupation, setOccupation] = useState<Occupation | null>(null);
 
   /* =========================
+     🔥 AUTH STATE LISTENER (CRUCIAL)
+     ========================= */
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        login(); // ✅ sync Zustand
+        router.replace('/(tabs)'); // ✅ navigate only AFTER Firebase login
+      }
+    });
+
+    return unsub;
+  }, []);
+
+  /* =========================
      HANDLERS
      ========================= */
 
-  const handleLogin = () => {
-    if (!email || !password || !userName) {
-      Alert.alert('Error', 'Please fill all fields');
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill email and password');
       return;
     }
 
-    
-    login(); 
-     router.replace('/(tabs)');
-
-    Alert.alert('Success', 'Logged in');
+    try {
+      await firebaseLogin(email, password);
+      // 🔧 navigation handled by auth listener
+    } catch (error: any) {
+      Alert.alert('Login failed', error.message);
+    }
   };
 
-  const handleRegister = () => {
-    if (!email || !password || !ageGroup || !techLevel || !occupation ||!userName) {
+  const handleRegister = async () => {
+    if (
+      !email ||
+      !password ||
+      !userName ||
+      !ageGroup ||
+      !techLevel ||
+      !occupation
+    ) {
       Alert.alert('Error', 'Please fill all registration fields');
       return;
     }
-        login(); 
-         router.replace('/(tabs)');
 
-
-    Alert.alert('Success', 'Registered');
+    try {
+      await firebaseRegister(email, password);
+      // 🔧 navigation handled by auth listener
+    } catch (error: any) {
+      Alert.alert('Registration failed', error.message);
+    }
   };
 
   /* =========================
@@ -98,16 +134,10 @@ export default function LoginScreen() {
   }) => (
     <Pressable
       onPress={onPress}
-      style={[
-        styles.option,
-        selected && styles.optionSelected,
-      ]}
+      style={[styles.option, selected && styles.optionSelected]}
     >
       <Text
-        style={[
-          styles.optionText,
-          selected && styles.optionTextSelected,
-        ]}
+        style={[styles.optionText, selected && styles.optionTextSelected]}
       >
         {label}
       </Text>
@@ -119,30 +149,29 @@ export default function LoginScreen() {
      ========================= */
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <Text style={styles.title}>BuyForce</Text>
 
-      {/* EMAIL */}
       <TextInput
         style={styles.input}
         placeholder="Email"
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
-
-        
+        autoCapitalize="none"
       />
 
-       {/* USERNAME */}
       <TextInput
         style={styles.input}
         placeholder="Username"
         value={userName}
         onChangeText={setUserName}
-        keyboardType="default"
       />
 
-      {/* PASSWORD */}
       <TextInput
         style={styles.input}
         placeholder="Password"
@@ -151,7 +180,6 @@ export default function LoginScreen() {
         secureTextEntry
       />
 
-      {/* TOGGLE */}
       <Pressable
         onPress={() => setShowRegister(!showRegister)}
         style={styles.link}
@@ -163,44 +191,36 @@ export default function LoginScreen() {
         </Text>
       </Pressable>
 
-      {/* REGISTER FIELDS */}
       {showRegister && (
         <>
-          {/* AGE GROUP */}
           <Text style={styles.sectionTitle}>Age Group</Text>
           <View style={styles.row}>
-            {(['0-18', '19-26', '27-40', '40-50', '50+'] as AgeGroup[]).map(
-              (g) => (
-                <Option
-                  key={g}
-                  label={g}
-                  selected={ageGroup === g}
-                  onPress={() => setAgeGroup(g)}
-                />
-              )
-            )}
+            {(['18-26', '27-40', '40-50', '50+'] as AgeGroup[]).map((g) => (
+              <Option
+                key={g}
+                label={g}
+                selected={ageGroup === g}
+                onPress={() => setAgeGroup(g)}
+              />
+            ))}
           </View>
 
-          {/* TECH LEVEL */}
           <Text style={styles.sectionTitle}>Tech Level</Text>
           <View style={styles.row}>
-            {(['Beginner', 'Intermediate', 'Expert'] as TechLevel[]).map(
-              (l) => (
-                <Option
-                  key={l}
-                  label={l}
-                  selected={techLevel === l}
-                  onPress={() => setTechLevel(l)}
-                />
-              )
-            )}
+            {(['Beginner', 'Intermediate', 'Expert'] as TechLevel[]).map((l) => (
+              <Option
+                key={l}
+                label={l}
+                selected={techLevel === l}
+                onPress={() => setTechLevel(l)}
+              />
+            ))}
           </View>
 
-          {/* OCCUPATION */}
           <Text style={styles.sectionTitle}>Occupation</Text>
           <View style={styles.row}>
             {([
-                 'Student',
+              'Student',
               'Software Developer / Engineer',
               'Designer / Creative Professional',
               'Product Manager',
@@ -208,7 +228,7 @@ export default function LoginScreen() {
               'IT / Tech Support',
               'Marketing / Social Media',
               'Retail / Service Worker',
-             'Administrative / Office Worker',
+              'Administrative / Office Worker',
               'Content Creator',
               'Other',
             ] as Occupation[]).map((job) => (
@@ -223,7 +243,18 @@ export default function LoginScreen() {
         </>
       )}
 
-      {/* ACTION BUTTONS */}
+      {/* ✅ GOOGLE SIGN-IN BUTTON */}
+      <Pressable
+        style={[
+          styles.loginButton,
+          { backgroundColor: '#DB4437' },
+        ]}
+        disabled={!request}
+        onPress={() => promptGoogleLogin()} // 🔧 FIX: only trigger Google
+      >
+        <Text style={styles.buttonText}>Continue with Google</Text>
+      </Pressable>
+
       <View style={styles.buttonRow}>
         <Pressable style={styles.loginButton} onPress={handleLogin}>
           <Text style={styles.buttonText}>Login</Text>
@@ -238,7 +269,7 @@ export default function LoginScreen() {
           </Pressable>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -248,7 +279,6 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     padding: 20,
     paddingTop: 80,
     backgroundColor: '#f5f5f5',
