@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
 import { Order } from '../orders/order.entity';
 import { Comment } from '../products/comment.entity';
 
@@ -32,6 +33,18 @@ export class User {
 
   @OneToMany(() => Comment, (comment) => comment.user)
   comments: Comment[];
+
+  @Column({ type: 'varchar', nullable: true })
+  fullName?: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  phone?: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  address?: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  avatarUrl?: string;
 
   @CreateDateColumn()
   createdAt: Date;

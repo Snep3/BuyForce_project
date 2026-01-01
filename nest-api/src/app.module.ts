@@ -19,6 +19,9 @@ import { GroupsModule } from './groups/groups.module';
 import { OrdersModule } from './orders/orders.module';
 // Importing AdminModule to handle admin-related functionalities
 import { AdminModule } from './admin/admin.module';
+// Importing NotificationsModule to handle notifications functionalities
+import { NotificationsModule } from './notifications/notifications.module';
+
 
 // Defining the main application module
 @Module({
@@ -30,6 +33,7 @@ import { AdminModule } from './admin/admin.module';
     GroupsModule, // 👈 חשוב שזה פה
     OrdersModule,
     AdminModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,10 +1,16 @@
-// src/users/users.service.ts
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken';
+
 import { User } from './user.entity';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class UsersService {
@@ -13,6 +19,7 @@ export class UsersService {
     private readonly userRepo: Repository<User>,
   ) {}
 
+ 
   async signup(username: string, email: string, password: string) {
     if (!username || !email || !password) {
       throw new BadRequestException('All fields are required');
@@ -26,17 +33,16 @@ export class UsersService {
       throw new BadRequestException('User already exists');
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = this.userRepo.create({
       username,
       email,
-      password: hashed,
-      is_admin: false, // default
+      password: hashedPassword,
+      is_admin: false,
     });
 
     const saved = await this.userRepo.save(user);
-
     const token = this.signToken(saved.id, saved.is_admin);
 
     return {
@@ -60,8 +66,8 @@ export class UsersService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const ok = await bcrypt.compare(password, user.password);
-    if (!ok) {
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -78,21 +84,46 @@ export class UsersService {
     };
   }
 
-  async getMe(userId: string) {
+ 
+  async getProfile(userId: string) {
     const user = await this.userRepo.findOne({ where: { id: userId } });
+
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new NotFoundException('User not found');
     }
 
-    // לא מחזירים סיסמה
-    const { password, ...safe } = user;
-    return safe;
+    const { password, ...safeUser } = user;
+    return safeUser;
   }
 
-  private signToken(id: string, is_admin: boolean) {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) throw new Error('JWT_SECRET not set');
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
 
-    return jwt.sign({ id, is_admin }, secret, { expiresIn: '7d' });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (dto.fullName !== undefined) user.fullName = dto.fullName;
+    if (dto.phone !== undefined) user.phone = dto.phone;
+    if (dto.address !== undefined) user.address = dto.address;
+    if (dto.avatarUrl !== undefined) user.avatarUrl = dto.avatarUrl;
+
+    const updated = await this.userRepo.save(user);
+
+    const { password, ...safeUser } = updated;
+    return safeUser;
+  }
+
+  private signToken(userId: string, is_admin: boolean) {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not set');
+    }
+
+    return jwt.sign(
+      { id: userId, is_admin },
+      secret,
+      { expiresIn: '7d' },
+    );
   }
 }
