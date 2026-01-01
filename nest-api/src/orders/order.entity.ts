@@ -1,4 +1,4 @@
-// nest-api/src/orders/order.entity.ts
+// src/orders/order.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -14,26 +14,37 @@ import { OrderItem } from './order-item.entity';
 
 @Entity('orders')
 export class Order {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  // מי עשה את ההזמנה
-  @ManyToOne(() => User, { nullable: false })
-  user: User;
-
-  // לאיזו קבוצת רכישה שייכת ההזמנה
-  @ManyToOne(() => Group, { nullable: false })
-  group: Group;
-
-  // סכום כולל של ההזמנה (אפשר לעדכן לפי הפריטים)
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  // סה"כ מחיר – שמרנו כ-string בשביל פשטות
+  @Column({ type: 'numeric', nullable: false, default: 0 })
   totalPrice: string;
 
-  // סטטוס בסיסי של הזמנה
-  @Column({ type: 'varchar', length: 20, default: 'pending' })
-  status: string; // 'pending' | 'paid' | 'canceled' וכו'
+  @Column({ type: 'varchar', length: 50, default: 'pending' })
+  status: string;
 
-  @OneToMany(() => OrderItem, (item) => item.order)
+  // === קשר למשתמש ===
+  @Column({ type: 'uuid' })
+  userId: string;
+
+  @ManyToOne(() => User, (user) => user.orders, { onDelete: 'CASCADE' })
+  user: User;
+
+  // === קשר לקבוצה (אופציונלי) ===
+  @Column({ type: 'uuid', nullable: true })
+  groupId: string | null;
+
+  @ManyToOne(() => Group, (group) => group.orders, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  group?: Group | null;
+
+  // === פריטי הזמנה ===
+  @OneToMany(() => OrderItem, (item) => item.order, {
+    cascade: ['insert', 'update'],
+  })
   items: OrderItem[];
 
   @CreateDateColumn()

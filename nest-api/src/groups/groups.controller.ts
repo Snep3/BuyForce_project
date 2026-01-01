@@ -1,22 +1,28 @@
 // src/groups/groups.controller.ts
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Req, UseGuards } from '@nestjs/common';
 import { GroupsService } from './groups.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('api/groups')
 export class GroupsController {
   constructor(private readonly groupsService: GroupsService) {}
 
-  // ראוט בדיקה קטן – לוודא שהמודול חי
   @Get('ping')
   ping() {
     return { ok: true };
   }
 
-  // החזרת קבוצה לפי productId
+  // קבוצות לפי מוצר – לשימוש בדף פרטי מוצר
   @Get('by-product/:productId')
-  async getByProduct(@Param('productId') productId: string) {
-    const group = await this.groupsService.findByProduct(productId);
-    // אם אין קבוצה – נחזיר null (200 עם null)
-    return group;
+  async getGroupsByProduct(@Param('productId') productId: string) {
+    return this.groupsService.findByProduct(productId);
+  }
+
+  // הקבוצות שהמשתמש שייך אליהן – לדף "הקבוצות שלי"
+  @UseGuards(JwtAuthGuard)
+  @Get('my')
+  async getMyGroups(@Req() req: any) {
+    const userId = req.user?.userId;
+    return this.groupsService.getGroupsForUser(userId);
   }
 }

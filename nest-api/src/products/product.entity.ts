@@ -3,34 +3,43 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
-  OneToMany,
 } from 'typeorm';
 import { Comment } from './comment.entity';
+import { Group } from '../groups/group.entity';
+import { OrderItem } from '../orders/order-item.entity';
 
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   name: string;
 
-  @Column('decimal')
+  @Column({ type: 'numeric' })
+  // נשתמש מספר בקוד – TypeORM כבר ידאג להמרה המתאימה
   price: number;
 
-  @Column()
+  @Column({ type: 'varchar' })
   category: string;
 
-  @Column({ default: 0 })
+  @Column({ type: 'int', default: 0 })
   stock: number;
 
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-   @OneToMany(() => Comment, (comment) => comment.product)
+  @OneToMany(() => Comment, (comment) => comment.product)
   comments: Comment[];
+
+  @OneToMany(() => Group, (group) => group.product)
+  groups: Group[];
+
+  @OneToMany(() => OrderItem, (item) => item.product)
+  orderItems: OrderItem[];
 
   @CreateDateColumn()
   createdAt: Date;

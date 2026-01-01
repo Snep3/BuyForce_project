@@ -1,5 +1,14 @@
 // nest-api/src/orders/orders.controller.ts
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  UseGuards,
+  Param,
+  Patch,
+} from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -19,5 +28,12 @@ export class OrdersController {
   async getMyOrders(@Req() req) {
     const userId = req.user?.userId;
     return this.ordersService.getMyOrders(userId);
+  }
+
+  // ביטול הזמנה – רק של המשתמש המחובר
+  @Patch(':id/cancel')
+  async cancelOrder(@Req() req, @Param('id') id: string) {
+    const userId = req.user?.userId;
+    return this.ordersService.cancelOrder(userId, id);
   }
 }

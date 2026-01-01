@@ -4,6 +4,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Min,
 } from 'class-validator';
 
@@ -14,7 +15,7 @@ export class UpdateGroupDto {
 
   @IsOptional()
   @IsString()
-  productId?: string;
+  description?: string;
 
   @IsOptional()
   @IsInt()
@@ -24,4 +25,8 @@ export class UpdateGroupDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsUUID()
+  productId?: string;
 }

@@ -13,6 +13,30 @@ export default function MyOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // פונקציה לטעינת ההזמנות מהשרת
+  const fetchOrders = async (token) => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const res = await axios.get(`${API_URL}/api/orders/my`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setOrders(res.data || []);
+    } catch (err) {
+      console.error(err);
+      setError(
+        err?.response?.data?.message ||
+          "קרתה שגיאה בזמן טעינת ההזמנות"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // טעינת ההזמנות של המשתמש המחובר בעת טעינת הדף
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -24,34 +48,45 @@ export default function MyOrdersPage() {
       return;
     }
 
-    // פונקציה לטעינת ההזמנות מהשרת
-    async function fetchOrders() {
-      try {
-        setLoading(true);
-        setError("");
+    fetchOrders(token);
+  }, [router]);
 
-        const res = await axios.get(`${API_URL}/api/orders/my`, {
+  // ביטול הזמנה
+  const handleCancelOrder = async (orderId) => {
+    if (typeof window === "undefined") return;
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    const ok = window.confirm("בטוח שברצונך לבטל את ההזמנה?");
+    if (!ok) return;
+
+    try {
+      setError("");
+
+      await axios.patch(
+        `${API_URL}/api/orders/${orderId}/cancel`,
+        null,
+        {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        });
+        }
+      );
 
-        // עדכון מצב ההזמנות
-        setOrders(res.data || []);
-      } catch (err) {
-        console.error(err);
-        setError(
-          err?.response?.data?.message ||
-            "קרתה שגיאה בזמן טעינת ההזמנות"
-        );
-      } finally {
-        setLoading(false);
-      }
+      // ריענון רשימת ההזמנות אחרי ביטול
+      await fetchOrders(token);
+    } catch (err) {
+      console.error(err);
+      setError(
+        err?.response?.data?.message ||
+          "קרתה שגיאה בזמן ביטול ההזמנה"
+      );
     }
-
-    // קריאה לפונקציה לטעינת ההזמנות
-    fetchOrders();
-  }, [router]);
+  };
 
   return (
     <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
@@ -66,6 +101,7 @@ export default function MyOrdersPage() {
         }}
       >
         <Link href="/products">⬅ חזרה לרשימת המוצרים</Link>
+        <Link href="/my-groups">הקבוצות שלי</Link>
         <Link href="/">דף הבית</Link>
       </div>
 
@@ -79,7 +115,7 @@ export default function MyOrdersPage() {
         <p>אין לך עדיין הזמנות.</p>
       )}
 
-// הצגת רשימת ההזמנות בעיצוב רספונסיבי פשוט
+      {/* הצגת רשימת ההזמנות בעיצוב רספונסיבי פשוט */}
       <div style={{ display: "grid", gap: "1rem", marginTop: "1rem" }}>
         {orders.map((order) => (
           <div
@@ -103,7 +139,7 @@ export default function MyOrdersPage() {
               </p>
             )}
 
-// הצגת פרטי הפריטים בהזמנה
+            {/* הצגת פרטי הפריטים בהזמנה */}
             {order.items && order.items.length > 0 && (
               <div style={{ marginTop: "0.5rem" }}>
                 <strong>פריטים:</strong>
@@ -132,6 +168,22 @@ export default function MyOrdersPage() {
                 ? new Date(order.createdAt).toLocaleString()
                 : "לא ידוע"}
             </p>
+
+            {/* כפתור ביטול הזמנה – רק אם היא עדיין בהמתנה */}
+            {order.status === "pending" && (
+              <button
+                onClick={() => handleCancelOrder(order.id)}
+                style={{
+                  marginTop: "0.75rem",
+                  padding: "0.5rem 1rem",
+                  borderRadius: "4px",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                בטל הזמנה
+              </button>
+            )}
           </div>
         ))}
       </div>

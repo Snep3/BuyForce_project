@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -23,10 +24,13 @@ export class Comment {
   })
   user: User;
 
-  @ManyToOne(() => Product, (product) => product.comments, {
-    onDelete: 'CASCADE',
-  })
-  product: Product;
+  @ManyToOne(() => Product, (product) => product.comments, { onDelete: 'CASCADE' })
+@JoinColumn({ name: 'productId' })
+product: Product;
+
+@Column({ type: 'uuid' })
+productId: string;
+
 
   @CreateDateColumn()
   createdAt: Date;

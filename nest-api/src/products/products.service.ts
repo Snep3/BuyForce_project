@@ -1,159 +1,182 @@
 // src/products/products.service.ts
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-
 import { Product } from './product.entity';
 import { Comment } from './comment.entity';
-import { AddCommentDto } from './dto/add-comment.dto';
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
 import { User } from '../users/user.entity';
+import { AddCommentDto } from './dto/add-comment.dto';
+
+
+interface CreateProductDtoLike {
+  name: string;
+  price: number;
+  category: string;
+  stock?: number; // אופציונלי – מתאים ל-CreateProductDto שלך
+  description?: string;
+}
+
+interface UpdateProductDtoLike {
+  name?: string;
+  price?: number;
+  category?: string;
+  stock?: number;
+  description?: string;
+}
+
+interface CreateCommentDtoLike {
+  content: string;
+}
 
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
+
     @InjectRepository(Comment)
     private readonly commentRepo: Repository<Comment>,
+
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-  ) { }
+  ) {}
+
+  // ========= מוצרים =========
 
   async findAll(): Promise<Product[]> {
-    return this.productRepo.find();
+    return this.productRepo.find({
+      relations: ['comments', 'groups'],
+    });
   }
 
-  async findById(id: string): Promise<Product> {
+  async findOne(id: string): Promise<Product> {
     const product = await this.productRepo.findOne({
       where: { id },
-      relations: ['comments'],
+      relations: ['comments', 'groups'],
     });
 
-    if (!product) throw new NotFoundException('Product not found');
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
     return product;
   }
 
-  async createProduct(data: {
-    name: string;
-    price: number;
-    category: string;
-    stock?: number;
-    description?: string;
-  }): Promise<Product> {
-    // DTO כבר מוודא כמעט הכל, אבל נשמור guard בסיסי
-    if (!data.name || data.price == null || !data.category) {
-      throw new BadRequestException('Name, price, and category are required');
-    }
+  // alias ל־findOne – כי ה־controller קורא findById
+  async findById(id: string): Promise<Product> {
+    return this.findOne(id);
+  }
 
+  // alias: createProduct – ל־admin + products controllers
+  async createProduct(dto: CreateProductDtoLike): Promise<Product> {
     const product = this.productRepo.create({
-      name: data.name,
-      price: data.price,
-      category: data.category,
-      stock: data.stock ?? 0,
-      description: data.description,
+      name: dto.name,
+      price: dto.price,
+      category: dto.category,
+      stock: dto.stock ?? 0,
+      description: dto.description,
     });
 
     return this.productRepo.save(product);
   }
 
-  // דוגמה לפונקציה – תחליף את הקיימת אצלך
-  async addComment(
-    productId: string,
-    userId: string,
-    content: string,
-  ): Promise<Comment> {
-    // יוצרים אובייקט Comment עם קשרים לפי ה-Entity
-    const comment = this.commentRepo.create({
-      content,
-      product: { id: productId } as any,
-      user: { id: userId } as any,
-    });
-
-    return this.commentRepo.save(comment);
-  }
-  // הוספת תגובה למוצר
-  async addCommentToProduct(
-    productId: string,
-    userId: string,
-    dto: AddCommentDto,
-  ): Promise<Comment> {
-    const product = await this.productRepo.findOne({
-      where: { id: productId },
-    });
-    if (!product) {
-      throw new NotFoundException('Product not found');
-    }
-
-    const user = await this.userRepo.findOne({
-      where: { id: userId },
-    });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    const comment = this.commentRepo.create({
-      content: dto.content,
-      product,
-      user,
-    });
-
-    return this.commentRepo.save(comment);
+  // alias: create – אם יש שימושים אחרים בקוד
+  async create(dto: CreateProductDtoLike): Promise<Product> {
+    return this.createProduct(dto);
   }
 
-  // החזרת כל התגובות למוצר
-  async getCommentsForProduct(productId: string): Promise<Comment[]> {
-    const product = await this.productRepo.findOne({
-      where: { id: productId },
-    });
-    if (!product) {
-      throw new NotFoundException('Product not found');
-    }
-
-    return this.commentRepo.find({
-      where: { product: { id: productId } },
-      relations: ['user'],
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-
-
+  // alias: updateProduct – ל־admin + products controllers
   async updateProduct(
     id: string,
-    patch: {
-      name?: string;
-      price?: number;
-      category?: string;
-      stock?: number;
-      description?: string;
-    },
+    patch: UpdateProductDtoLike,
   ): Promise<Product> {
-    const product = await this.productRepo.findOne({ where: { id } });
-    if (!product) throw new NotFoundException('Product not found');
+    const product = await this.findOne(id);
 
-    // מעדכנים רק מה שנשלח
-    if (patch.name !== undefined) product.name = patch.name;
-    if (patch.price !== undefined) product.price = patch.price;
-    if (patch.category !== undefined) product.category = patch.category;
-    if (patch.stock !== undefined) product.stock = patch.stock;
-    if (patch.description !== undefined) product.description = patch.description;
+    if (patch.name !== undefined) {
+      product.name = patch.name;
+    }
+    if (patch.price !== undefined) {
+      product.price = patch.price;
+    }
+    if (patch.category !== undefined) {
+      product.category = patch.category;
+    }
+    if (patch.stock !== undefined) {
+      product.stock = patch.stock;
+    }
+    if (patch.description !== undefined) {
+      product.description = patch.description;
+    }
 
-    await this.productRepo.save(product);
-
-    // מחזירים מוצר מעודכן (כולל comments)
-    return this.findById(id);
+    return this.productRepo.save(product);
   }
 
-  async deleteProduct(id: string): Promise<{ deleted: true }> {
-    const product = await this.productRepo.findOne({ where: { id } });
-    if (!product) throw new NotFoundException('Product not found');
+  // alias: update – אם יש שימושים אחרים בקוד
+  async update(id: string, patch: UpdateProductDtoLike): Promise<Product> {
+    return this.updateProduct(id, patch);
+  }
 
-    // בגלל onDelete: 'CASCADE' ב-Comment -> יימחקו גם התגובות
+  // alias: deleteProduct – ל־admin + products controllers
+  async deleteProduct(id: string): Promise<void> {
+    const product = await this.findOne(id);
     await this.productRepo.remove(product);
-
-    return { deleted: true };
   }
+
+  // alias: remove – אם יש שימושים אחרים בקוד
+  async remove(id: string): Promise<void> {
+    return this.deleteProduct(id);
+  }
+
+  // ========= תגובות מוצר =========
+
+ // החזרת כל התגובות למוצר
+async getCommentsForProduct(productId: string): Promise<Comment[]> {
+  const product = await this.productRepo.findOne({
+    where: { id: productId },
+  });
+
+  if (!product) {
+    throw new NotFoundException('Product not found');
+  }
+
+  return this.commentRepo.find({
+    where: { product: { id: productId } },
+    relations: ['user'], // כדי שנקבל את המשתמש שכתב את התגובה
+    order: { createdAt: 'DESC' },
+  });
+}
+
+// הוספת תגובה למוצר
+async addCommentToProduct(
+  productId: string,
+  userId: string,
+  dto: AddCommentDto,
+): Promise<Comment> {
+  // מוודאים שהמוצר קיים
+  const product = await this.productRepo.findOne({
+    where: { id: productId },
+  });
+  if (!product) {
+    throw new NotFoundException('Product not found');
+  }
+
+  // מוודאים שהמשתמש קיים
+  const user = await this.userRepo.findOne({
+    where: { id: userId },
+  });
+  if (!user) {
+    throw new NotFoundException('User not found');
+  }
+
+  // יוצרים ישות Comment חדשה עם קשרים מלאים
+  const comment = this.commentRepo.create({
+    content: dto.content,
+    product, // Relation למוצר
+    user,    // Relation למשתמש
+  });
+
+  // נשמור ונחזיר את התגובה
+  return this.commentRepo.save(comment);
+}
 
 }

@@ -1,138 +1,126 @@
 // src/orders/orders.service.ts
 import {
   Injectable,
-  NotFoundException,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Order } from './order.entity';
 import { OrderItem } from './order-item.entity';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { User } from '../users/user.entity';
-import { Group } from '../groups/group.entity';
 import { Product } from '../products/product.entity';
-import { GroupMember } from '../groups/group-member.entity';
+import { Group } from '../groups/group.entity';
+import { User } from '../users/user.entity';
 
 @Injectable()
 export class OrdersService {
   constructor(
     @InjectRepository(Order)
     private readonly orderRepo: Repository<Order>,
+
     @InjectRepository(OrderItem)
     private readonly orderItemRepo: Repository<OrderItem>,
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
-    @InjectRepository(Group)
-    private readonly groupRepo: Repository<Group>,
+
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
-    @InjectRepository(GroupMember)
-    private readonly groupMemberRepo: Repository<GroupMember>,
+
+    @InjectRepository(Group)
+    private readonly groupRepo: Repository<Group>,
+
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
 
-  async createOrder(userId: string, dto: CreateOrderDto): Promise<Order> {
-    const user = await this.userRepo.findOne({
-      where: { id: userId },
-    });
+  // פונקציה פנימית אחת ליצירת הזמנה – כל ה־create* יקראו אליה
+  private async createOrderInternal(userId: string, dto: any): Promise<Order> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    const group = await this.groupRepo.findOne({
-      where: { id: dto.groupId },
-    });
-    if (!group) {
-      throw new NotFoundException('Group not found');
-    }
+    // תומך גם במבנה: { items: [...] } וגם במבנה של מוצר יחיד (productId + quantity)
+    const itemsInput =
+      Array.isArray(dto.items) && dto.items.length > 0
+        ? dto.items
+        : dto.productId
+        ? [{ productId: dto.productId, quantity: dto.quantity ?? 1 }]
+        : [];
 
-    if (!dto.items || dto.items.length === 0) {
+    if (!itemsInput.length) {
       throw new BadRequestException('Order must contain at least one item');
     }
 
-    // נטען את כל המוצרים לפי ה־IDs שהגיעו
-    const productIds = dto.items.map((i) => i.productId);
-
+    const productIds = itemsInput.map((i) => i.productId);
     const products = await this.productRepo.find({
-      where: productIds.map((id) => ({ id })),
+      where: { id: In(productIds) },
     });
 
     if (products.length !== productIds.length) {
       throw new BadRequestException('One or more products not found');
     }
 
-    const productMap = new Map<string, Product>();
-    products.forEach((p) => productMap.set(p.id, p));
+    const productMap = new Map(products.map((p) => [p.id, p]));
 
-    let totalPriceDecimal = 0;
+    // קבוצה – חובה אצלכם כדי שהזמנה תהיה תקפה
+    const group = dto.groupId
+      ? await this.groupRepo.findOne({ where: { id: dto.groupId } })
+      : null;
 
+    if (!group) {
+      throw new BadRequestException(
+        'Group is required to create an order (product must belong to a group)',
+      );
+    }
+
+    let orderTotal = 0;
+
+    // יוצרים ישות Order בסיסית
     const order = this.orderRepo.create({
+      totalPrice: '0', // שדה string לפי Order.totalPrice
+      status: dto.status ?? 'pending',
       user,
+      userId: user.id,
       group,
-      status: 'pending',
-      totalPrice: '0',
+      groupId: group.id,
     });
 
     const savedOrder = await this.orderRepo.save(order);
 
-    const items: OrderItem[] = [];
+    const orderItems: OrderItem[] = [];
 
-    for (const itemDto of dto.items) {
-      const product = productMap.get(itemDto.productId);
+    for (const item of itemsInput) {
+      const product = productMap.get(item.productId);
       if (!product) {
-        continue;
+        throw new BadRequestException(`Product ${item.productId} not found`);
       }
 
-      // נניח ש-price מוגדר כמספר או מחרוזת שניתן להמיר למספר
-      const unitPriceNumber = Number((product as any).price ?? 0);
-      if (Number.isNaN(unitPriceNumber)) {
-        throw new BadRequestException('Invalid product price');
-      }
+      const quantity = item.quantity ?? 1;
+      const unitPriceNum = Number(product.price);
+      const lineTotal = unitPriceNum * quantity;
 
-      const lineTotal = unitPriceNumber * itemDto.quantity;
-      totalPriceDecimal += lineTotal;
+      orderTotal += lineTotal;
 
       const orderItem = this.orderItemRepo.create({
         order: savedOrder,
+        orderId: savedOrder.id,
         product,
-        quantity: itemDto.quantity,
-        unitPrice: unitPriceNumber.toString(),
+        productId: product.id,
+        quantity,
+        unitPrice: unitPriceNum.toString(),
         totalPrice: lineTotal.toString(),
       });
 
-      items.push(orderItem);
+      orderItems.push(orderItem);
     }
 
-    if (items.length === 0) {
-      throw new BadRequestException('No valid items in order');
-    }
+    await this.orderItemRepo.save(orderItems);
 
-    await this.orderItemRepo.save(items);
-
-    // עדכון סכום ההזמנה
-    savedOrder.totalPrice = totalPriceDecimal.toString();
+    savedOrder.totalPrice = orderTotal.toString();
     await this.orderRepo.save(savedOrder);
-
-    // רישום המשתמש כחבר בקבוצה (אם עדיין לא רשום)
-    const existingMembership = await this.groupMemberRepo.findOne({
-      where: {
-        user: { id: user.id },
-        group: { id: group.id },
-      },
-    });
-
-    if (!existingMembership) {
-      const gm = this.groupMemberRepo.create({
-        user,
-        group,
-        quantity: 1,
-      });
-      await this.groupMemberRepo.save(gm);
-    }
 
     const fullOrder = await this.orderRepo.findOne({
       where: { id: savedOrder.id },
-      relations: ['items', 'items.product', 'group'],
+      relations: ['items', 'items.product', 'group', 'user'],
     });
 
     if (!fullOrder) {
@@ -142,13 +130,74 @@ export class OrdersService {
     return fullOrder;
   }
 
-  async getMyOrders(userId: string): Promise<Order[]> {
+  // שמות אלטרנטיביים – כדי שמה שלא קורא לך בקוד, יעבוד:
+  async createOrder(userId: string, dto: any): Promise<Order> {
+    return this.createOrderInternal(userId, dto);
+  }
+
+  async create(userId: string, dto: any): Promise<Order> {
+    return this.createOrderInternal(userId, dto);
+  }
+
+  async createOrderForUser(userId: string, dto: any): Promise<Order> {
+    return this.createOrderInternal(userId, dto);
+  }
+
+  // לוגיקת "ההזמנות שלי" – כמה שמות עטיפה, ליתר ביטחון:
+  private async getUserOrdersInternal(userId: string): Promise<Order[]> {
     return this.orderRepo.find({
-      where: { user: { id: userId } },
+      where: { userId },
       relations: ['items', 'items.product', 'group'],
       order: { createdAt: 'DESC' },
     });
   }
+
+  async getOrdersForUser(userId: string): Promise<Order[]> {
+    return this.getUserOrdersInternal(userId);
+  }
+
+  async getMyOrders(userId: string): Promise<Order[]> {
+    return this.getUserOrdersInternal(userId);
+  }
+
+  async findUserOrders(userId: string): Promise<Order[]> {
+    return this.getUserOrdersInternal(userId);
+  }
+
+  // ========= ביטול הזמנה =========
+
+  private async cancelOrderInternal(
+    userId: string,
+    orderId: string,
+  ): Promise<Order> {
+    const order = await this.orderRepo.findOne({
+      where: { id: orderId, userId },
+      relations: ['items', 'items.product', 'group'],
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // לא נותנים לבטל שוב, או לבטל הזמנה שכבר הושלמה
+    if (order.status === 'canceled') {
+      throw new BadRequestException('Order already canceled');
+    }
+
+    if (order.status === 'completed') {
+      throw new BadRequestException('Completed orders cannot be canceled');
+    }
+
+    order.status = 'canceled';
+    await this.orderRepo.save(order);
+
+    return order;
+  }
+
+  async cancelOrder(userId: string, orderId: string): Promise<Order> {
+    return this.cancelOrderInternal(userId, orderId);
+  }
+
+  // אם תרצה בהמשך – אפשר להוסיף גם aliasים:
+  // cancel(userId: string, orderId: string) { ... }
 }
-
-

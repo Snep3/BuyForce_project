@@ -3,36 +3,45 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Product } from '../products/product.entity';
+import { Order } from '../orders/order.entity';
 
-// ייצוג של קבוצת רכישה
 @Entity('groups')
 export class Group {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // שם הקבוצה/קמפיין
   @Column()
   name: string;
 
-  // תיאור קצר (אופציונלי)
   @Column({ type: 'text', nullable: true })
-  description?: string;
+  description?: string | null;
 
-  // מינימום מצטרפים כדי שהקבוצה "תצא לדרך"
-  @Column({ default: 1 })
+  @Column({ type: 'int', default: 0 })
   minParticipants: number;
 
-  // האם הקבוצה פעילה
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
-  // מזהה המוצר שהקבוצה שייכת אליו
-  @Column({ type: 'varchar', nullable: true })
-productId: string;
+  // המזהה של המוצר יכול להיות אופציונלי / ריק (למקרה שמנתקים מוצר מהקבוצה)
+  @Column({ type: 'uuid', nullable: true })
+  productId?: string | null;
 
+  @ManyToOne(() => Product, (product) => product.groups, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'productId' })
+  product?: Product | null;
+
+  @OneToMany(() => Order, (order) => order.group)
+  orders: Order[];
 
   @CreateDateColumn()
   createdAt: Date;
