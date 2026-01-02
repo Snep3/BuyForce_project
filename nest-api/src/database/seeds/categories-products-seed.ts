@@ -241,9 +241,9 @@ deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
 
     console.log('💵 יוצר טרנזקציות...');
     const transactionsData = [
-        { userId: userSeva1.id, groupId: groupMap['OPEN'].id, amount: ancHeadphones.priceGroup, currency: 'ILS', type: TransactionType.CHARGE, status: TransactionStatus.SUCCESS, provider: 'stripe', providerRef: 'TRZ-' + uuidv4().substring(0, 10), idempotencyKey: uuidv4() },
-        { userId: userPre1.id, groupId: groupMap['LOCKED'].id, amount: flagshipPhone.priceGroup, currency: 'ILS', type: TransactionType.CHARGE, status: TransactionStatus.SUCCESS, provider: 'stripe', providerRef: 'TRZ-' + uuidv4().substring(0, 10), idempotencyKey: uuidv4() },
-        { userId: userPre1.id, groupId: groupMap['FAILED'].id, amount: gamingLaptop.priceGroup, currency: 'ILS', type: TransactionType.REFUND, status: TransactionStatus.SUCCESS, provider: 'stripe', providerRef: 'TRZ-' + uuidv4().substring(0, 10), idempotencyKey: uuidv4() },
+        { userId: userSeva1.id, groupId: groupMap['OPEN'].id, amount: ancHeadphones.priceGroup, currency: 'ILS', type: TransactionType.CHARGE, status: TransactionStatus.SUCCESS, provider: 'stripe', providerRef: 'STR-' + uuidv4().substring(0, 10), idempotencyKey: uuidv4() },
+        { userId: userPre1.id, groupId: groupMap['LOCKED'].id, amount: flagshipPhone.priceGroup, currency: 'ILS', type: TransactionType.CHARGE, status: TransactionStatus.SUCCESS, provider: 'stripe', providerRef: 'STR-' + uuidv4().substring(0, 10), idempotencyKey: uuidv4() },
+        { userId: userPre1.id, groupId: groupMap['FAILED'].id, amount: gamingLaptop.priceGroup, currency: 'ILS', type: TransactionType.REFUND, status: TransactionStatus.SUCCESS, provider: 'stripe', providerRef: 'STR-' + uuidv4().substring(0, 10), idempotencyKey: uuidv4() },
     ];
     const savedTransactions = await transactionRepository.save(transactionRepository.create(transactionsData) as any);
     const transactionMap = savedTransactions.reduce((map, tx) => { map[tx.userId + tx.groupId] = tx; return map; }, {} as Record<string, Transaction>);
