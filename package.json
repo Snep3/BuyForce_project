@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/schedule": "^6.1.0",
+    "@nestjs/typeorm": "^11.0.0",
+    "axios": "^1.13.2",
+    "class-transformer": "^0.5.1",
+    "date-fns": "^4.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.16.3",
+    "typeorm": "^0.3.28"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^25.0.3"
+  }
+}

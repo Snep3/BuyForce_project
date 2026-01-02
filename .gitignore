@@ -1,0 +1,29 @@
+# לא להעלות שום node_modules
+node_modules/
+**/node_modules/
+
+# קבצי סביבה
+.env
+*.env
+.env.local
+
+# Nest build
+dist/
+coverage/
+
+# Next build
+.next/
+out/
+
+# לוגים
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+// קבצים זמניים
+express-api/
+
+# Snyk Security Extension - AI Rules (auto-generated)
+.github/instructions/snyk_rules.instructions.md

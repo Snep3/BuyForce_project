@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16
+    container_name: buyforce_db_docker
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: nadav
+      POSTGRES_DB: buyforce
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres_new_data:/var/lib/postgresql/data
+      - ./dump_fixed.sql:/docker-entrypoint-initdb.d/backup.sql
+    # הוספת בדיקה שה-DB באמת מוכן
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d buyforce"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./nest-api
+    container_name: buyforce_api_docker
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      - DB_HOST=db        
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=nadav
+      - DB_DATABASE=buyforce
+      - JWT_SECRET=buyforce_secret_key_2025
+    depends_on:
+      db:
+        condition: service_healthy # שינוי חשוב כאן!
