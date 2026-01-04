@@ -1,4 +1,3 @@
-// src/groups/group.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -11,34 +10,44 @@ import {
 } from 'typeorm';
 import { Product } from '../products/product.entity';
 import { Order } from '../orders/order.entity';
+import { GroupMember } from './group-member.entity';
 
 @Entity('groups')
 export class Group {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   name: string;
 
   @Column({ type: 'text', nullable: true })
-  description?: string | null;
+  description?: string;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'int' })
   minParticipants: number;
 
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
-  // המזהה של המוצר יכול להיות אופציונלי / ריק (למקרה שמנתקים מוצר מהקבוצה)
-  @Column({ type: 'uuid', nullable: true })
-  productId?: string | null;
+  // חדש 👇
+  @Column({ type: 'boolean', default: false })
+  isCompleted: boolean;
+
+  // חדש 👇
+  @Column({ type: 'timestamp', nullable: true })
+  completedAt?: Date;
 
   @ManyToOne(() => Product, (product) => product.groups, {
-    nullable: true,
-    onDelete: 'SET NULL',
+    onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'productId' })
-  product?: Product | null;
+  product: Product;
+
+  @Column({ type: 'uuid' })
+  productId: string;
+
+  @OneToMany(() => GroupMember, (gm) => gm.group)
+  members: GroupMember[];
 
   @OneToMany(() => Order, (order) => order.group)
   orders: Order[];

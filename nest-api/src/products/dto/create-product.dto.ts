@@ -1,10 +1,20 @@
 // src/products/dto/create-product.dto.ts
-import { IsString, IsNotEmpty, IsNumber, IsOptional, Min, IsInt } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  Min,
+  IsInt,
+  MaxLength,
+  IsUrl,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateProductDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(120)
   name: string;
 
   @Type(() => Number)
@@ -25,5 +35,10 @@ export class CreateProductDto {
   @IsString()
   @IsOptional()
   description?: string;
-}
 
+  // ✅ חדש
+  @IsOptional()
+  @IsUrl()
+  @MaxLength(500)
+  imageUrl?: string;
+}

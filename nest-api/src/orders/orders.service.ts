@@ -61,16 +61,9 @@ export class OrdersService {
 
     const productMap = new Map(products.map((p) => [p.id, p]));
 
-    // קבוצה – חובה אצלכם כדי שהזמנה תהיה תקפה
     const group = dto.groupId
       ? await this.groupRepo.findOne({ where: { id: dto.groupId } })
       : null;
-
-    if (!group) {
-      throw new BadRequestException(
-        'Group is required to create an order (product must belong to a group)',
-      );
-    }
 
     let orderTotal = 0;
 
@@ -80,8 +73,8 @@ export class OrdersService {
       status: dto.status ?? 'pending',
       user,
       userId: user.id,
-      group,
-      groupId: group.id,
+      group: group ?? null,
+      groupId: group?.id ?? null,
     });
 
     const savedOrder = await this.orderRepo.save(order);
@@ -143,7 +136,7 @@ export class OrdersService {
     return this.createOrderInternal(userId, dto);
   }
 
-  // לוגיקת "ההזמנות שלי" – כמה שמות עטיפה, ליתר ביטחון:
+  // לוגיקת "ההזמנות שלי"
   private async getUserOrdersInternal(userId: string): Promise<Order[]> {
     return this.orderRepo.find({
       where: { userId },
@@ -164,40 +157,60 @@ export class OrdersService {
     return this.getUserOrdersInternal(userId);
   }
 
-  // ========= ביטול הזמנה =========
+  // 🔹 "הקבוצות שלי" – על בסיס Orders (MVP)
+  async getMyGroups(userId: string) {
+    if (!userId) {
+      throw new BadRequestException('Missing user id');
+    }
 
-  private async cancelOrderInternal(
-    userId: string,
-    orderId: string,
-  ): Promise<Order> {
-    const order = await this.orderRepo.findOne({
-      where: { id: orderId, userId },
-      relations: ['items', 'items.product', 'group'],
+    // כל ההזמנות של המשתמש, כולל group + product של הקבוצה
+    const orders = await this.orderRepo.find({
+      where: { userId },
+      relations: ['group', 'group.product'],
+      order: { createdAt: 'DESC' },
     });
 
-    if (!order) {
-      throw new NotFoundException('Order not found');
+    // ממפים קבוצות ייחודיות שהמשתמש נמצא בהן
+    const groupsMap = new Map<string, Group>();
+
+    for (const order of orders) {
+      if (order.group) {
+        groupsMap.set(order.group.id, order.group);
+      }
     }
 
-    // לא נותנים לבטל שוב, או לבטל הזמנה שכבר הושלמה
-    if (order.status === 'canceled') {
-      throw new BadRequestException('Order already canceled');
+    const results: any[] = [];
+
+    for (const [groupId, group] of groupsMap.entries()) {
+      // כמה משתתפים יש בקבוצה? (נספר Orders לפי groupId)
+      const participantsCount = await this.orderRepo.count({
+        where: { groupId },
+      });
+
+      const minParticipants = group.minParticipants || 1;
+
+      const ratio = participantsCount / minParticipants;
+      const progressPercent = Math.min(100, Math.round(ratio * 100));
+
+      const status =
+        !group.isActive
+          ? 'closed'
+          : ratio >= 1
+          ? 'full'
+          : 'active';
+
+      results.push({
+        groupId,
+        groupName: group.name,
+        productId: group.productId ?? null,
+        productName: group.product?.name ?? null,
+        minParticipants,
+        participantsCount,
+        progressPercent,
+        status,
+      });
     }
 
-    if (order.status === 'completed') {
-      throw new BadRequestException('Completed orders cannot be canceled');
-    }
-
-    order.status = 'canceled';
-    await this.orderRepo.save(order);
-
-    return order;
+    return results;
   }
-
-  async cancelOrder(userId: string, orderId: string): Promise<Order> {
-    return this.cancelOrderInternal(userId, orderId);
-  }
-
-  // אם תרצה בהמשך – אפשר להוסיף גם aliasים:
-  // cancel(userId: string, orderId: string) { ... }
 }

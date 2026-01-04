@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Order } from '../orders/order.entity';
 import { Comment } from '../products/comment.entity';
+import { Notification } from '../notifications/notification.entity';
 
 @Entity('users')
 export class User {
@@ -27,11 +28,28 @@ export class User {
   @Column({ default: false })
   is_admin: boolean;
 
+  // ✅ Profile fields
+  @Column({ type: 'varchar', length: 80, nullable: true })
+  fullName: string | null;
+
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  phone: string | null;
+
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  address: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  avatarUrl: string | null;
+
   @OneToMany(() => Order, (order) => order.user)
   orders: Order[];
 
   @OneToMany(() => Comment, (comment) => comment.user)
   comments: Comment[];
+
+  // ✅ Notifications relation
+  @OneToMany(() => Notification, (n) => n.user)
+  notifications: Notification[];
 
   @CreateDateColumn()
   createdAt: Date;

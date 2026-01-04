@@ -1,10 +1,16 @@
 // src/users/users.service.ts
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 import { User } from './user.entity';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class UsersService {
@@ -32,27 +38,18 @@ export class UsersService {
       username,
       email,
       password: hashed,
-      is_admin: false, // default
+      is_admin: false,
     });
 
     const saved = await this.userRepo.save(user);
 
-    const token = this.signToken(saved.id, saved.is_admin);
-
-    return {
-      token,
-      user: {
-        id: saved.id,
-        username: saved.username,
-        email: saved.email,
-        is_admin: saved.is_admin,
-      },
-    };
+    const { password: _, ...safe } = saved as any;
+    return safe;
   }
 
   async login(email: string, password: string) {
     if (!email || !password) {
-      throw new BadRequestException('Email and password required');
+      throw new BadRequestException('Email and password are required');
     }
 
     const user = await this.userRepo.findOne({ where: { email } });
@@ -65,17 +62,10 @@ export class UsersService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const token = this.signToken(user.id, user.is_admin);
+    const token = this.signToken(user.id, !!user.is_admin);
 
-    return {
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        is_admin: user.is_admin,
-      },
-    };
+    const { password: _, ...safe } = user as any;
+    return { token, user: safe };
   }
 
   async getMe(userId: string) {
@@ -84,8 +74,23 @@ export class UsersService {
       throw new UnauthorizedException('User not found');
     }
 
-    // לא מחזירים סיסמה
-    const { password, ...safe } = user;
+    const { password: _, ...safe } = user as any;
+    return safe;
+  }
+
+  // ✅ חדש: update profile
+  async updateMyProfile(userId: string, dto: UpdateProfileDto) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    user.fullName = dto.fullName ?? user.fullName;
+    user.phone = dto.phone ?? user.phone;
+    user.address = dto.address ?? user.address;
+    user.avatarUrl = dto.avatarUrl ?? user.avatarUrl;
+
+    const saved = await this.userRepo.save(user);
+
+    const { password: _, ...safe } = saved as any;
     return safe;
   }
 

@@ -18,6 +18,13 @@ export default function NavBar() {
     router.push("/login");
   }
 
+  const isLoggedIn = !!user;
+
+  const linkStyle = (href) => ({
+    textDecoration: "none",
+    fontWeight: router.pathname === href ? "700" : "400",
+  });
+
   return (
     <nav
       style={{
@@ -26,32 +33,75 @@ export default function NavBar() {
         alignItems: "center",
         padding: "0.75rem 1rem",
         borderBottom: "1px solid #eee",
-        marginBottom: "1.5rem",
+        marginBottom: "1.25rem",
         fontFamily: "sans-serif",
+        flexWrap: "wrap",
       }}
     >
-      <Link href="/">Home</Link>
-      <Link href="/products">Products</Link>
+      {/* Public */}
+      <Link href="/" style={linkStyle("/")}>
+        Home
+      </Link>
+      <Link href="/products" style={linkStyle("/products")}>
+        Products
+      </Link>
 
+      {/* User (requires login) */}
+      {isLoggedIn && (
+        <>
+          <Link href="/groups" style={linkStyle("/groups")}>
+            Groups
+          </Link>
+          <Link href="/my-groups" style={linkStyle("/my-groups")}>
+            My Groups
+          </Link>
+          <Link href="/my-orders" style={linkStyle("/my-orders")}>
+            My Orders
+          </Link>
+          <Link href="/wishlist" style={linkStyle("/wishlist")}>
+            Wishlist
+          </Link>
+          <Link href="/profile" style={linkStyle("/profile")}>
+            Profile
+          </Link>
+          <Link href="/notifications" style={linkStyle("/notifications")}>
+            Notifications
+          </Link>
+        </>
+      )}
+
+      {/* Admin */}
       {user?.is_admin && (
         <>
-          <Link href="/admin/products">Admin Products</Link>
-          <Link href="/admin/groups">Admin Groups</Link>
+          <span style={{ opacity: 0.4 }}>|</span>
+          <Link href="/admin/products" style={linkStyle("/admin/products")}>
+            Admin Products
+          </Link>
+          <Link href="/admin/groups" style={linkStyle("/admin/groups")}>
+            Admin Groups
+          </Link>
         </>
       )}
 
       <div style={{ marginLeft: "auto", display: "flex", gap: "0.75rem" }}>
-        {user ? (
+        {isLoggedIn ? (
           <>
             <span style={{ opacity: 0.8 }}>
-              {user.username} {user.is_admin ? "(admin)" : ""}
+              {user.username || user.email} {user.is_admin ? "(admin)" : ""}
             </span>
             <button onClick={logout} style={{ cursor: "pointer" }}>
               Logout
             </button>
           </>
         ) : (
-          <Link href="/login">Login</Link>
+          <>
+            <Link href="/login" style={linkStyle("/login")}>
+              Login
+            </Link>
+            <Link href="/register" style={linkStyle("/register")}>
+              Register
+            </Link>
+          </>
         )}
       </div>
     </nav>

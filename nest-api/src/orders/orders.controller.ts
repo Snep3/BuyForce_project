@@ -1,14 +1,5 @@
-// nest-api/src/orders/orders.controller.ts
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  Req,
-  UseGuards,
-  Param,
-  Patch,
-} from '@nestjs/common';
+// src/orders/orders.controller.ts
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -20,7 +11,7 @@ export class OrdersController {
 
   @Post()
   async createOrder(@Req() req, @Body() dto: CreateOrderDto) {
-    const userId = req.user?.userId; // כמו ב-JWT שלכם
+    const userId = req.user?.userId;
     return this.ordersService.createOrder(userId, dto);
   }
 
@@ -30,10 +21,10 @@ export class OrdersController {
     return this.ordersService.getMyOrders(userId);
   }
 
-  // ביטול הזמנה – רק של המשתמש המחובר
-  @Patch(':id/cancel')
-  async cancelOrder(@Req() req, @Param('id') id: string) {
+  // 🔹 "הקבוצות שלי" – מחזיר קבוצות שהמשתמש חלק מהן
+  @Get('my-groups')
+  async getMyGroups(@Req() req) {
     const userId = req.user?.userId;
-    return this.ordersService.cancelOrder(userId, id);
+    return this.ordersService.getMyGroups(userId);
   }
 }

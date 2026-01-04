@@ -2,6 +2,7 @@
 import "@/styles/globals.css";
 import { useEffect } from "react";
 import { useRouter } from "next/router";
+import NavBar from "../components/NavBar";
 
 function getAuth() {
   if (typeof window === "undefined") return { token: null, user: null };
@@ -25,5 +26,14 @@ export default function App({ Component, pageProps }) {
     }
   }, [router.pathname]);
 
-  return <Component {...pageProps} />;
+  // לא מציגים NavBar בדפי auth
+  const hideNav =
+    router.pathname === "/login" || router.pathname === "/register";
+
+  return (
+    <>
+      {!hideNav && <NavBar />}
+      <Component {...pageProps} />
+    </>
+  );
 }

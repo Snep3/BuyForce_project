@@ -1,29 +1,46 @@
-// nest-api/src/groups/group-member.entity.ts
+// src/groups/group-member.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
-  ManyToOne,
   Column,
+  ManyToOne,
+  JoinColumn,
   CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Group } from './group.entity';
 import { User } from '../users/user.entity';
 
 @Entity('group_members')
 export class GroupMember {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @ManyToOne(() => Group, { nullable: false })
+  // מזהה הקבוצה
+  @Column({ type: 'uuid' })
+  groupId: string;
+
+  // מזהה המשתמש
+  @Column({ type: 'uuid' })
+  userId: string;
+
+  // קשר לקבוצה
+  @ManyToOne(() => Group, (group) => group.members, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'groupId' })
   group: Group;
 
-  @ManyToOne(() => User, { nullable: false })
+  // קשר למשתמש
+  @ManyToOne(() => User, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'userId' })
   user: User;
-
-  // כמה יחידות המשתמש הזמין בקבוצה הזו (1 = רק הצטרפות)
-  @Column({ type: 'int', default: 1 })
-  quantity: number;
 
   @CreateDateColumn()
   joinedAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

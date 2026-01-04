@@ -32,6 +32,10 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+imageUrl: string | null;
+
+
   @OneToMany(() => Comment, (comment) => comment.product)
   comments: Comment[];
 

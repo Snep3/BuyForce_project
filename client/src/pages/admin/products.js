@@ -1,319 +1,353 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import Link from "next/link";
-import { API_URL } from "../../config/api";
-import NavBar from "../../components/NavBar";
+// client/src/pages/admin/products.js
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
+import { http } from "../../config/http";
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("token");
-}
+const emptyForm = {
+  name: "",
+  price: 0,
+  category: "",
+  stock: 0,
+  description: "",
+  imageUrl: "",
+};
 
 export default function AdminProductsPage() {
+  const router = useRouter();
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [products, setProducts] = useState([]);
+
+  const [mode, setMode] = useState("create"); // create | edit
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  // create form
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [category, setCategory] = useState("");
-  const [stock, setStock] = useState("");
-  const [description, setDescription] = useState("");
+  const [imgPreviewError, setImgPreviewError] = useState("");
 
-  useEffect(() => {
-    fetchProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const isAdmin = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    const raw = localStorage.getItem("user");
+    const user = raw ? JSON.parse(raw) : null;
+    return !!user?.is_admin;
   }, []);
 
-  async function fetchProducts() {
+  useEffect(() => {
+    if (!isAdmin) {
+      router.replace("/login");
+      return;
+    }
+
+    (async () => {
+      try {
+        setError("");
+        setLoading(true);
+        const res = await http.get("/api/products");
+        setItems(Array.isArray(res.data) ? res.data : []);
+      } catch (e) {
+        console.error(e);
+        setError(e?.response?.data?.message || "Failed to load products");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [router, isAdmin]);
+
+  function startCreate() {
+    setMode("create");
+    setEditingId(null);
+    setForm(emptyForm);
+    setError("");
+    setImgPreviewError("");
+  }
+
+  function startEdit(p) {
+    setMode("edit");
+    setEditingId(p.id);
+    setForm({
+      name: p.name || "",
+      price: Number(p.price || 0),
+      category: p.category || "",
+      stock: Number(p.stock || 0),
+      description: p.description || "",
+      imageUrl: p.imageUrl || "",
+    });
+    setError("");
+    setImgPreviewError("");
+  }
+
+  async function remove(id) {
+    if (!confirm("Delete product?")) return;
     try {
-      setLoading(true);
-      setError("");
-
-      const token = getToken();
-
-      const res = await axios.get(`${API_URL}/api/admin/products`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setProducts(res.data || []);
-    } catch (err) {
-      console.error(err);
-      setError(err?.response?.data?.message || "Failed to load products");
-    } finally {
-      setLoading(false);
+      await http.delete(`/api/products/${id}`);
+      setItems((prev) => prev.filter((x) => x.id !== id));
+      if (editingId === id) startCreate();
+    } catch (e) {
+      console.error(e);
+      alert(e?.response?.data?.message || "Failed to delete product");
     }
   }
 
-  async function handleCreate(e) {
+  function normalizeImageUrl(url) {
+    const u = (url || "").trim();
+    if (!u) return "";
+    // אם המשתמש שם "www..." בלי http, נוסיף https
+    if (!/^https?:\/\//i.test(u)) return `https://${u}`;
+    return u;
+  }
+
+  async function submit(e) {
     e.preventDefault();
+    setSaving(true);
     setError("");
 
+    const payload = {
+      name: form.name,
+      price: Number(form.price),
+      category: form.category,
+      stock: form.stock === "" ? 0 : Number(form.stock),
+      description: form.description || undefined,
+      imageUrl: form.imageUrl ? normalizeImageUrl(form.imageUrl) : undefined,
+    };
+
     try {
-      const token = getToken();
+      let res;
+      if (mode === "create") {
+        res = await http.post("/api/products", payload);
+        const created = res.data;
+        setItems((prev) => [created, ...prev]);
+      } else {
+        res = await http.patch(`/api/products/${editingId}`, payload);
+        const updated = res.data;
+        setItems((prev) => prev.map((x) => (x.id === editingId ? updated : x)));
+      }
 
-      const payload = {
-        name,
-        price: Number(price),
-        category,
-        stock: stock === "" ? undefined : Number(stock),
-        description: description || undefined,
-      };
+      startCreate();
+    } catch (e) {
+      console.error(e);
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        "Save failed";
 
-      const res = await axios.post(`${API_URL}/api/admin/products`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setProducts((prev) => [res.data, ...prev]);
-
-      setName("");
-      setPrice("");
-      setCategory("");
-      setStock("");
-      setDescription("");
-    } catch (err) {
-      console.error(err);
-      setError(err?.response?.data?.message || "Create failed");
+      // אם השרת מחזיר message כמערך (class-validator), נציג יפה:
+      if (Array.isArray(msg)) setError(msg.join(" | "));
+      else setError(msg);
+    } finally {
+      setSaving(false);
     }
   }
 
-  async function handleDelete(id) {
-    if (!confirm("למחוק מוצר?")) return;
-
-    try {
-      const token = getToken();
-
-      await axios.delete(`${API_URL}/api/admin/products/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setProducts((prev) => prev.filter((p) => (p.id || p._id) !== id));
-    } catch (err) {
-      console.error(err);
-      setError(err?.response?.data?.message || "Delete failed");
-    }
-  }
-
-  async function handleEdit(product) {
-    const id = product.id || product._id;
-
-    const newName = prompt("name", product.name ?? "");
-    if (newName === null) return;
-
-    const newPrice = prompt("price", String(product.price ?? ""));
-    if (newPrice === null) return;
-
-    const newCategory = prompt("category", product.category ?? "");
-    if (newCategory === null) return;
-
-    const newStock = prompt("stock", String(product.stock ?? 0));
-    if (newStock === null) return;
-
-    const newDescription = prompt("description", product.description ?? "");
-    if (newDescription === null) return;
-
-    try {
-      const token = getToken();
-
-      const payload = {
-        name: newName,
-        price: Number(newPrice),
-        category: newCategory,
-        stock: Number(newStock),
-        description: newDescription || undefined,
-      };
-
-      const res = await axios.put(`${API_URL}/api/admin/products/${id}`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setProducts((prev) =>
-        prev.map((p) => ((p.id || p._id) === id ? res.data : p))
-      );
-    } catch (err) {
-      console.error(err);
-      setError(err?.response?.data?.message || "Update failed");
-    }
-  }
+  const previewUrl = form.imageUrl ? normalizeImageUrl(form.imageUrl) : "";
 
   return (
-    <>
-      <NavBar />
+    <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
+      <h1>Admin Products</h1>
 
-      <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-        <h1>Admin / Products</h1>
+      {loading ? <p>Loading...</p> : null}
+      {error ? <p style={{ color: "red" }}>{error}</p> : null}
 
-        <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-          <Link href="/">🏠 Home</Link>
-          <Link href="/admin/groups">👥 Admin Groups</Link>
-          <Link href="/products">🛒 Public Products</Link>
-        </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 420px",
+          gap: "1.5rem",
+          alignItems: "start",
+          marginTop: "1rem",
+        }}
+      >
+        {/* List */}
+        <section style={{ border: "1px solid #eee", borderRadius: 6, padding: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <h2 style={{ marginTop: 0 }}>Products</h2>
+            <button onClick={startCreate} style={{ cursor: "pointer" }}>
+              + New
+            </button>
+          </div>
 
-        {error && (
-          <p style={{ color: "crimson", marginBottom: "1rem" }}>{error}</p>
-        )}
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            {items.map((p) => (
+              <div
+                key={p.id}
+                style={{
+                  border: "1px solid #ddd",
+                  borderRadius: 6,
+                  padding: "0.75rem",
+                  display: "flex",
+                  gap: "0.75rem",
+                  alignItems: "center",
+                }}
+              >
+                <div
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 6,
+                    overflow: "hidden",
+                    background: "#fafafa",
+                    display: "grid",
+                    placeItems: "center",
+                    flex: "0 0 auto",
+                  }}
+                >
+                  {p.imageUrl ? (
+                    <img
+                      src={p.imageUrl}
+                      alt={p.name}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      onError={(e) => {
+                        // לא מסתירים בשקט — מציגים fallback
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  ) : null}
+                  {!p.imageUrl ? (
+                    <span style={{ opacity: 0.6, fontSize: 12 }}>No image</span>
+                  ) : null}
+                </div>
 
-        <section
-          style={{
-            border: "1px solid #ddd",
-            padding: "1rem",
-            borderRadius: 8,
-            marginBottom: "1.5rem",
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>Create Product</h2>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700 }}>{p.name}</div>
+                  <div style={{ opacity: 0.8, fontSize: 13 }}>
+                    ₪{p.price} • {p.category} • stock {p.stock}
+                  </div>
+                  {p.imageUrl ? (
+                    <div style={{ opacity: 0.65, fontSize: 12, marginTop: 4 }}>
+                      {p.imageUrl}
+                    </div>
+                  ) : null}
+                </div>
 
-          <form
-            onSubmit={handleCreate}
-            style={{ display: "grid", gap: "0.75rem", maxWidth: 420 }}
-          >
-            <input
-              placeholder="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-            <input
-              placeholder="price"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              required
-            />
-            <input
-              placeholder="category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              required
-            />
-            <input
-              placeholder="stock (optional)"
-              value={stock}
-              onChange={(e) => setStock(e.target.value)}
-            />
-            <input
-              placeholder="description (optional)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-            <button type="submit">Create</button>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button onClick={() => startEdit(p)} style={{ cursor: "pointer" }}>
+                    Edit
+                  </button>
+                  <button onClick={() => remove(p.id)} style={{ cursor: "pointer" }}>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Form */}
+        <section style={{ border: "1px solid #eee", borderRadius: 6, padding: "1rem" }}>
+          <h2 style={{ marginTop: 0 }}>
+            {mode === "create" ? "Create Product" : "Edit Product"}
+          </h2>
+
+          <form onSubmit={submit} style={{ display: "grid", gap: "0.75rem" }}>
+            <label>
+              Name
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                style={{ width: "100%", padding: "0.5rem" }}
+                required
+              />
+            </label>
+
+            <label>
+              Price
+              <input
+                type="number"
+                value={form.price}
+                onChange={(e) => setForm({ ...form, price: e.target.value })}
+                style={{ width: "100%", padding: "0.5rem" }}
+                min={0}
+                required
+              />
+            </label>
+
+            <label>
+              Category
+              <input
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                style={{ width: "100%", padding: "0.5rem" }}
+                required
+              />
+            </label>
+
+            <label>
+              Stock
+              <input
+                type="number"
+                value={form.stock}
+                onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                style={{ width: "100%", padding: "0.5rem" }}
+                min={0}
+              />
+            </label>
+
+            <label>
+              Description
+              <textarea
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                style={{ width: "100%", padding: "0.5rem", minHeight: 80 }}
+              />
+            </label>
+
+            <label>
+              Image URL (must be http/https)
+              <input
+                value={form.imageUrl}
+                onChange={(e) => {
+                  setForm({ ...form, imageUrl: e.target.value });
+                  setImgPreviewError("");
+                }}
+                style={{ width: "100%", padding: "0.5rem" }}
+                placeholder="https://example.com/image.jpg"
+              />
+            </label>
+
+            {previewUrl ? (
+              <div style={{ display: "grid", gap: 8 }}>
+                <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                  <div
+                    style={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: 6,
+                      overflow: "hidden",
+                      background: "#fafafa",
+                      border: "1px solid #ddd",
+                      display: "grid",
+                      placeItems: "center",
+                    }}
+                  >
+                    <img
+                      src={previewUrl}
+                      alt="preview"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      onError={() => setImgPreviewError("Image failed to load (bad URL or blocked by CORS)")}
+                    />
+                  </div>
+                  <span style={{ opacity: 0.7, fontSize: 13 }}>Preview</span>
+                </div>
+
+                {imgPreviewError ? (
+                  <div style={{ color: "red", fontSize: 13 }}>{imgPreviewError}</div>
+                ) : null}
+
+                <div style={{ fontSize: 12, opacity: 0.7 }}>
+                  Saved URL will be: <b>{previewUrl}</b>
+                </div>
+              </div>
+            ) : null}
+
+            <button
+              disabled={saving}
+              type="submit"
+              style={{ padding: "0.6rem", cursor: "pointer" }}
+            >
+              {saving ? "Saving..." : mode === "create" ? "Create" : "Update"}
+            </button>
           </form>
         </section>
-
-        <section>
-          <h2 style={{ marginTop: 0 }}>Products List</h2>
-
-          {loading ? (
-            <p>Loading...</p>
-          ) : products.length === 0 ? (
-            <p>No products</p>
-          ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th
-                    style={{
-                      textAlign: "left",
-                      borderBottom: "1px solid #ddd",
-                      padding: "0.5rem",
-                    }}
-                  >
-                    Name
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "left",
-                      borderBottom: "1px solid #ddd",
-                      padding: "0.5rem",
-                    }}
-                  >
-                    Price
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "left",
-                      borderBottom: "1px solid #ddd",
-                      padding: "0.5rem",
-                    }}
-                  >
-                    Category
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "left",
-                      borderBottom: "1px solid #ddd",
-                      padding: "0.5rem",
-                    }}
-                  >
-                    Stock
-                  </th>
-                  <th
-                    style={{
-                      borderBottom: "1px solid #ddd",
-                      padding: "0.5rem",
-                    }}
-                  >
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((p) => {
-                  const id = p.id || p._id;
-                  return (
-                    <tr key={id}>
-                      <td
-                        style={{
-                          borderBottom: "1px solid #eee",
-                          padding: "0.5rem",
-                        }}
-                      >
-                        {p.name}
-                      </td>
-                      <td
-                        style={{
-                          borderBottom: "1px solid #eee",
-                          padding: "0.5rem",
-                        }}
-                      >
-                        {p.price}
-                      </td>
-                      <td
-                        style={{
-                          borderBottom: "1px solid #eee",
-                          padding: "0.5rem",
-                        }}
-                      >
-                        {p.category}
-                      </td>
-                      <td
-                        style={{
-                          borderBottom: "1px solid #eee",
-                          padding: "0.5rem",
-                        }}
-                      >
-                        {p.stock ?? 0}
-                      </td>
-                      <td
-                        style={{
-                          borderBottom: "1px solid #eee",
-                          padding: "0.5rem",
-                          textAlign: "center",
-                        }}
-                      >
-                        <button onClick={() => handleEdit(p)} style={{ marginRight: 8 }}>
-                          Edit
-                        </button>
-                        <button onClick={() => handleDelete(id)}>Delete</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </section>
-      </main>
-    </>
+      </div>
+    </main>
   );
 }

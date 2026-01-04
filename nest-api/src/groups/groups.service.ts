@@ -1,10 +1,15 @@
 // src/groups/groups.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Not, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Group } from './group.entity';
+import { GroupMember } from './group-member.entity';
 import { Product } from '../products/product.entity';
-import { Order } from '../orders/order.entity';
+import { User } from '../users/user.entity';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 
@@ -14,80 +19,253 @@ export class GroupsService {
     @InjectRepository(Group)
     private readonly groupRepo: Repository<Group>,
 
+    @InjectRepository(GroupMember)
+    private readonly groupMemberRepo: Repository<GroupMember>,
+
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
 
-    @InjectRepository(Order)
-    private readonly orderRepo: Repository<Order>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
 
-  /**
-   * מוסיף לכל קבוצה נתוני סטטוס:
-   * participantsCount, remainingToTarget, progressPercent, isFull
-   */
-  private async addStatsToGroups(groups: Group[]) {
-    if (!groups.length) return [];
+  // -------------------------------------------------
+  // חבילה 1 – לוגיקת קבוצות למשתמשים
+  // -------------------------------------------------
 
-    const groupIds = groups.map((g) => g.id);
-
-    // כל ההזמנות האקטיביות בקבוצות האלה (לא מבוטלות)
-    const orders = await this.orderRepo.find({
-      where: {
-        groupId: In(groupIds),
-        status: Not('canceled'),
-      },
+  // רשימת כל הקבוצות
+  async getAllGroups() {
+    const groups = await this.groupRepo.find({
+      relations: ['product', 'members'],
+      order: { createdAt: 'DESC' },
     });
 
-    const participantsMap = new Map<string, Set<string>>();
+    return groups.map((g) => {
+      const currentParticipants = g.members ? g.members.length : 0;
 
-    for (const order of orders) {
-      if (!order.groupId) continue;
-      let set = participantsMap.get(order.groupId);
-      if (!set) {
-        set = new Set<string>();
-        participantsMap.set(order.groupId, set);
-      }
-      if (order.userId) {
-        set.add(order.userId);
-      }
-    }
-
-    return groups.map((group) => {
-      const participantsSet = participantsMap.get(group.id) ?? new Set();
-      const participantsCount = participantsSet.size;
-
-      const min = group.minParticipants || 0;
-      const remainingToTarget =
-        min > 0 ? Math.max(0, min - participantsCount) : 0;
-
-      const progressPercent =
-        min > 0
-          ? Math.min(100, Math.round((participantsCount / min) * 100))
+      const progress =
+        g.minParticipants > 0
+          ? Math.min(
+              100,
+              Math.round((currentParticipants / g.minParticipants) * 100),
+            )
           : 0;
 
-      const isFull = remainingToTarget <= 0;
-
       return {
-        ...group,
-        stats: {
-          participantsCount,
-          minParticipants: min,
-          remainingToTarget,
-          progressPercent,
-          isFull,
-        },
+        id: g.id,
+        name: g.name,
+        description: g.description,
+        minParticipants: g.minParticipants,
+        isActive: g.isActive,
+        productId: g.productId,
+        product: g.product,
+        currentParticipants,
+        progress,
       };
     });
   }
 
-  // ----- לשימוש כללי / אדמין -----
+  // הקבוצות שלי
+  async getUserGroups(userId: string) {
+    if (!userId) throw new BadRequestException('User not authenticated');
+
+    const memberships = await this.groupMemberRepo.find({
+      where: { userId },
+      relations: ['group', 'group.product', 'group.members'],
+      order: { joinedAt: 'DESC' },
+    });
+
+    return memberships.map((m) => {
+      const g = m.group;
+      const currentParticipants = g.members ? g.members.length : 0;
+
+      const progress =
+        g.minParticipants > 0
+          ? Math.min(
+              100,
+              Math.round((currentParticipants / g.minParticipants) * 100),
+            )
+          : 0;
+
+      return {
+        id: g.id,
+        name: g.name,
+        description: g.description,
+        minParticipants: g.minParticipants,
+        isActive: g.isActive,
+        productId: g.productId,
+        product: g.product,
+        currentParticipants,
+        progress,
+        joinedAt: m.joinedAt,
+      };
+    });
+  }
+
+  // הצטרפות לקבוצה
+ async joinGroupWithPayment(userId: string, groupId: string) {
+  if (!userId) {
+    throw new BadRequestException('User not authenticated');
+  }
+
+  const group = await this.groupRepo.findOne({
+    where: { id: groupId },
+    relations: ['members'],
+  });
+
+  if (!group) throw new NotFoundException('Group not found');
+  if (!group.isActive) throw new BadRequestException('Group is not active');
+
+  // ❗ קבוצה שכבר הושלמה – אין כניסה
+  if (group.isCompleted) {
+    throw new BadRequestException('Group already completed');
+  }
+
+  const user = await this.userRepo.findOne({ where: { id: userId } });
+  if (!user) throw new NotFoundException('User not found');
+
+  const currentCount = await this.groupMemberRepo.count({
+    where: { groupId: group.id },
+  });
+
+  if (currentCount >= group.minParticipants) {
+    // ביטחון כפול
+    group.isCompleted = true;
+    group.completedAt = new Date();
+    await this.groupRepo.save(group);
+
+    throw new BadRequestException('Group already full');
+  }
+
+  const existing = await this.groupMemberRepo.findOne({
+    where: { groupId: group.id, userId: user.id },
+  });
+
+  if (existing) {
+    return {
+      joined: false,
+      alreadyMember: true,
+      message: 'Already joined this group',
+    };
+  }
+
+  const membership = this.groupMemberRepo.create({
+    group,
+    groupId: group.id,
+    user,
+    userId: user.id,
+  });
+
+  await this.groupMemberRepo.save(membership);
+
+  const newCount = currentCount + 1;
+
+  // 👇 כאן קסם — אם הקבוצה הגיעה ליעד
+  if (newCount >= group.minParticipants) {
+    group.isCompleted = true;
+    group.completedAt = new Date();
+    await this.groupRepo.save(group);
+
+    // 👇 פה בעתיד נכניס Notifications + חיוב Stripe
+  }
+
+  return {
+    joined: true,
+    alreadyMember: false,
+    groupId: group.id,
+    currentParticipants: newCount,
+    minParticipants: group.minParticipants,
+    isCompleted: group.isCompleted,
+  };
+}
+
+
+
+  // יציאה מקבוצה
+  async leaveGroup(userId: string, groupId: string) {
+    if (!userId) throw new BadRequestException('User not authenticated');
+
+    const group = await this.groupRepo.findOne({ where: { id: groupId } });
+    if (!group) throw new NotFoundException('Group not found');
+
+    if (!group.isActive) {
+      throw new BadRequestException('Group already completed');
+    }
+
+    const membership = await this.groupMemberRepo.findOne({
+      where: { groupId: group.id, userId },
+    });
+
+    if (!membership) {
+      throw new BadRequestException('User is not a member of this group');
+    }
+
+    await this.groupMemberRepo.remove(membership);
+
+    const membersCount = await this.groupMemberRepo.count({
+      where: { groupId: group.id },
+    });
+
+    const progress =
+      group.minParticipants > 0
+        ? Math.min(
+            100,
+            Math.round((membersCount / group.minParticipants) * 100),
+          )
+        : 0;
+
+    return {
+      id: group.id,
+      name: group.name,
+      description: group.description,
+      minParticipants: group.minParticipants,
+      isActive: group.isActive,
+      productId: group.productId,
+      currentParticipants: membersCount,
+      progress,
+    };
+  }
+
+  // קבוצה פעילה לפי מוצר
+  async getActiveGroupByProduct(productId: string) {
+    const group = await this.groupRepo.findOne({
+      where: { productId, isActive: true },
+      relations: ['members', 'product'],
+    });
+
+    if (!group) return null;
+
+    const membersCount = await this.groupMemberRepo.count({
+      where: { groupId: group.id },
+    });
+
+    const progress =
+      group.minParticipants > 0
+        ? Math.min(
+            100,
+            Math.round((membersCount / group.minParticipants) * 100),
+          )
+        : 0;
+
+    return {
+      id: group.id,
+      name: group.name,
+      description: group.description,
+      minParticipants: group.minParticipants,
+      isActive: group.isActive,
+      productId: group.productId,
+      product: group.product,
+      currentParticipants: membersCount,
+      progress,
+    };
+  }
+
+  // -------------------------------------------------
+  // Admin CRUD
+  // -------------------------------------------------
 
   async findAll() {
-    const groups = await this.groupRepo.find({
-      relations: ['product'],
-      order: { createdAt: 'DESC' },
-    });
-    return this.addStatsToGroups(groups);
+    return this.groupRepo.find({ relations: ['product'] });
   }
 
   async findOne(id: string) {
@@ -95,64 +273,28 @@ export class GroupsService {
       where: { id },
       relations: ['product'],
     });
+
     if (!group) throw new NotFoundException('Group not found');
-    const [withStats] = await this.addStatsToGroups([group]);
-    return withStats;
+    return group;
   }
-
-  // קבוצות לפי מוצר – לדף מוצר
-  async findByProduct(productId: string) {
-    const groups = await this.groupRepo.find({
-      where: { productId },
-      relations: ['product'],
-      order: { createdAt: 'ASC' },
-    });
-    return this.addStatsToGroups(groups);
-  }
-
-  // הקבוצות שהמשתמש שייך אליהן (יש לו הזמנה לא מבוטלת בקבוצה)
-  async getGroupsForUser(userId: string) {
-    if (!userId) return [];
-
-    const userOrders = await this.orderRepo.find({
-      where: { userId, status: Not('canceled') },
-      relations: ['group', 'group.product'],
-      order: { createdAt: 'DESC' },
-    });
-
-    const groupsMap = new Map<string, Group>();
-    for (const order of userOrders) {
-      if (order.group) {
-        groupsMap.set(order.group.id, order.group);
-      }
-    }
-
-    const groups = Array.from(groupsMap.values());
-    return this.addStatsToGroups(groups);
-  }
-
-  // ----- CRUD לקבוצות (אדמין) -----
 
   async create(dto: CreateGroupDto) {
     const product = await this.productRepo.findOne({
       where: { id: dto.productId },
     });
-    if (!product) {
-      throw new NotFoundException('Product not found for group');
-    }
+    if (!product) throw new BadRequestException('Product not found');
 
     const group = this.groupRepo.create({
       name: dto.name,
-      description: dto.description ?? null,
       minParticipants: dto.minParticipants,
       isActive: dto.isActive ?? true,
       product,
       productId: product.id,
     });
 
-    const saved = await this.groupRepo.save(group);
-    const [withStats] = await this.addStatsToGroups([saved]);
-    return withStats;
+    if (dto.description !== undefined) group.description = dto.description;
+
+    return this.groupRepo.save(group);
   }
 
   async update(id: string, dto: UpdateGroupDto) {
@@ -169,21 +311,19 @@ export class GroupsService {
       const product = await this.productRepo.findOne({
         where: { id: dto.productId },
       });
-      if (!product) {
-        throw new NotFoundException('Product not found for group');
-      }
+      if (!product) throw new BadRequestException('Product not found');
+
       group.product = product;
       group.productId = product.id;
     }
 
-    const saved = await this.groupRepo.save(group);
-    const [withStats] = await this.addStatsToGroups([saved]);
-    return withStats;
+    return this.groupRepo.save(group);
   }
 
   async remove(id: string) {
     const group = await this.groupRepo.findOne({ where: { id } });
     if (!group) throw new NotFoundException('Group not found');
+
     await this.groupRepo.remove(group);
     return { success: true };
   }

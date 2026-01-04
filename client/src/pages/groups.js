@@ -1,75 +1,57 @@
-// client/src/pages/my-groups.js
+// client/src/pages/groups.js
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { API_URL } from "../config/api";
 
-export default function MyGroupsPage() {
+export default function GroupsPage() {
   const router = useRouter();
 
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [leaveLoadingId, setLeaveLoadingId] = useState(null);
   const [error, setError] = useState("");
+  const [joinLoadingId, setJoinLoadingId] = useState(null);
 
   useEffect(() => {
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("token")
-        : null;
-
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    async function fetchMyGroups() {
+    async function fetchGroups() {
       try {
         setLoading(true);
         setError("");
 
-        const res = await axios.get(
-          `${API_URL}/api/groups/my`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
+        const res = await axios.get(`${API_URL}/api/groups`);
         setGroups(res.data || []);
       } catch (err) {
         console.error(err);
         setError(
           err?.response?.data?.message ||
-            "קרתה שגיאה בזמן טעינת הקבוצות שלך"
+            "קרתה שגיאה בזמן טעינת הקבוצות"
         );
       } finally {
         setLoading(false);
       }
     }
 
-    fetchMyGroups();
-  }, [router]);
+    fetchGroups();
+  }, []);
 
-  async function handleLeave(groupId) {
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("token")
-        : null;
+  async function handleJoin(groupId) {
+    const token = typeof window !== "undefined"
+      ? localStorage.getItem("token")
+      : null;
 
     if (!token) {
-      router.replace("/login");
+      router.push("/login");
       return;
     }
 
     try {
-      setLeaveLoadingId(groupId);
+      setJoinLoadingId(groupId);
       setError("");
 
-      await axios.delete(
+      const res = await axios.post(
         `${API_URL}/api/groups/${groupId}/join`,
+        {},
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -77,22 +59,37 @@ export default function MyGroupsPage() {
         }
       );
 
-      // אחרי עזיבה – מסנן מהרשימה
-      setGroups((prev) => prev.filter((g) => g.id !== groupId));
+      // מעדכן את הקבוצה ברשימה לפי החזרה מהשרת (progress, currentParticipants וכו')
+      setGroups((prev) =>
+        prev.map((g) =>
+          g.id === groupId
+            ? {
+                ...g,
+                currentParticipants:
+                  res.data.currentParticipants ?? g.currentParticipants,
+                progress: res.data.progress ?? g.progress,
+                isActive:
+                  typeof res.data.isActive === "boolean"
+                    ? res.data.isActive
+                    : g.isActive,
+              }
+            : g
+        )
+      );
     } catch (err) {
       console.error(err);
       setError(
         err?.response?.data?.message ||
-          "קרתה שגיאה בזמן יציאה מהקבוצה"
+          "קרתה שגיאה בזמן הצטרפות לקבוצה"
       );
     } finally {
-      setLeaveLoadingId(null);
+      setJoinLoadingId(null);
     }
   }
 
   return (
     <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>הקבוצות שלי</h1>
+      <h1>קבוצות רכישה</h1>
 
       <div
         style={{
@@ -102,8 +99,8 @@ export default function MyGroupsPage() {
           alignItems: "center",
         }}
       >
-        <Link href="/groups">⬅ חזרה לקבוצות</Link>
-        <Link href="/products">למוצרים</Link>
+        <Link href="/products">⬅ חזרה לרשימת המוצרים</Link>
+        <Link href="/my-groups">הקבוצות שלי</Link>
       </div>
 
       {loading && <p>טוען קבוצות...</p>}
@@ -112,7 +109,7 @@ export default function MyGroupsPage() {
       )}
 
       {!loading && !error && groups.length === 0 && (
-        <p>לא הצטרפת עדיין לשום קבוצה.</p>
+        <p>אין כרגע קבוצות פעילות.</p>
       )}
 
       <div
@@ -122,37 +119,39 @@ export default function MyGroupsPage() {
           marginTop: "1rem",
         }}
       >
-        {groups.map((g) => {
-          const progress = g.progress ?? 0;
-          const isFull = progress >= 100 || g.isActive === false;
+        {groups.map((group) => {
+          const progress = group.progress ?? 0;
+          const isFull =
+            progress >= 100 || group.isActive === false;
 
           return (
             <div
-              key={g.id}
+              key={group.id}
               style={{
                 border: "1px solid #ddd",
                 borderRadius: "4px",
                 padding: "1rem",
               }}
             >
-              <h3>{g.name}</h3>
+              <h3>{group.name}</h3>
 
-              {g.product && (
+              {group.product && (
                 <p>
                   מוצר:{" "}
-                  {g.product.name || `מוצר ${g.product.id}`}
+                  {group.product.name ||
+                    `מוצר ${group.product.id}`}
                 </p>
               )}
 
-              {g.description && (
+              {group.description && (
                 <p style={{ marginTop: "0.25rem" }}>
-                  {g.description}
+                  {group.description}
                 </p>
               )}
 
               <p style={{ marginTop: "0.25rem" }}>
-                משתתפים: {g.currentParticipants ?? 0} /{" "}
-                {g.minParticipants}
+                משתתפים: {group.currentParticipants ?? 0} /{" "}
+                {group.minParticipants}
               </p>
 
               <div
@@ -195,37 +194,25 @@ export default function MyGroupsPage() {
                 </p>
               )}
 
-              {g.joinedAt && (
-                <p
-                  style={{
-                    marginTop: "0.25rem",
-                    fontSize: "0.85rem",
-                  }}
-                >
-                  הצטרפת בתאריך:{" "}
-                  {new Date(g.joinedAt).toLocaleString()}
-                </p>
-              )}
-
               <button
-                onClick={() => handleLeave(g.id)}
-                disabled={isFull || leaveLoadingId === g.id}
+                onClick={() => handleJoin(group.id)}
+                disabled={isFull || joinLoadingId === group.id}
                 style={{
                   marginTop: "0.75rem",
                   padding: "0.5rem 1rem",
                   cursor:
-                    isFull || leaveLoadingId === g.id
+                    isFull || joinLoadingId === group.id
                       ? "not-allowed"
                       : "pointer",
                   opacity:
-                    isFull || leaveLoadingId === g.id ? 0.6 : 1,
+                    isFull || joinLoadingId === group.id ? 0.6 : 1,
                 }}
               >
                 {isFull
-                  ? "לא ניתן לצאת – הקבוצה מלאה"
-                  : leaveLoadingId === g.id
-                  ? "יוצא מהקבוצה..."
-                  : "עזוב קבוצה"}
+                  ? "הקבוצה מלאה"
+                  : joinLoadingId === group.id
+                  ? "מצטרף..."
+                  : "הצטרף לקבוצה בשקל"}
               </button>
             </div>
           );

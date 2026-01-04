@@ -3,6 +3,7 @@ import { useState } from "react";
 import axios from "axios";
 import { API_URL } from "../config/api";
 import { useRouter } from "next/router";
+import Link from "next/link";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -18,8 +19,15 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const res = await axios.post(`${API_URL}/api/users/signup`, {
+      // 1) signup
+      await axios.post(`${API_URL}/api/users/signup`, {
         username,
+        email,
+        password,
+      });
+
+      // 2) login
+      const res = await axios.post(`${API_URL}/api/users/login`, {
         email,
         password,
       });
@@ -34,6 +42,7 @@ export default function RegisterPage() {
       console.error(err);
       setError(
         err?.response?.data?.error ||
+          err?.response?.data?.message ||
           "Registration failed. Check your details."
       );
     } finally {
@@ -44,6 +53,10 @@ export default function RegisterPage() {
   return (
     <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
       <h1>הרשמה</h1>
+
+      <p style={{ marginTop: 8 }}>
+        כבר יש לך משתמש? <Link href="/login">להתחברות</Link>
+      </p>
 
       <form
         onSubmit={handleSubmit}
